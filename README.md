@@ -1,4 +1,4 @@
-# The Addon Shelf
+# LinuxForever Addon Shelf
 
 A desktop addon manager for the World of Warcraft: Forever client on Linux. Your installed addons are shown as tiles
 grouped by category; a catalog browses and searches several sources at once. Only Forever-compatible addons are shown,
@@ -13,16 +13,35 @@ installed or managed.
   game folder is explained with a way to point at it.
 - **Safe changes:** refuses to touch addons while the game is running, keeps the previous two versions of every
   addon, and can restore them.
-- **A real desktop application:** Python 3.11+ with PySide6 (Qt WebEngine) for the window; Pillow is optional and only used to show addon icons.
+- **Finds the game for you:** on first start, and whenever the game goes missing, it scans the usual places (Lutris,
+  Bottles, Heroic, Steam/Proton, plain Wine, their Flatpak versions, extra drives). You can also choose the folder in
+  Settings.
+- **Updates itself:** Settings can pull the newest version from this repository.
 
-## Run
+## Install
+
+```
+git clone https://github.com/novuskeylabs/addon-shelf.git
+cd addon-shelf
+./install.sh
+```
+
+The installer works the same on any mainstream distribution (Debian, Ubuntu, Mint, Fedora, Arch, openSUSE and their
+relatives). It needs Python 3.9 or newer and does not use root: the window toolkit (PySide6 / Qt WebEngine) and Pillow
+go into a private environment under `~/.local/share/linuxforever-addon-shelf`, so nothing can conflict with your
+distribution's packages. It adds a menu entry and a `linuxforever-addon-shelf` launcher. If your system lacks a
+graphics library Qt needs, the installer names it and the package to install. `./install.sh --uninstall` removes
+everything it added.
+
+Not covered by the installer: distributions built on musl instead of glibc (such as Alpine), where the toolkit has to
+come from the distribution's own packages.
+
+To run without installing, with PySide6 already on your system:
 
 ```
 python3 wowaddons.py            # starts the application
 python3 wowaddons.py --selftest # built-in checks
 ```
-
-The addon folder (`_forever_/Interface/AddOns`) is found under `~/Games` on first start.
 
 ## CurseForge
 
@@ -43,9 +62,9 @@ downloaded".
 
 ## Themes and artwork
 
-Settings offers faction, class and race themes plus plain colour schemes. The emblems in `art/` are original images
+Settings offers faction, class and race themes plus plain colour schemes. The app icon and the emblems in `art/` are original images
 generated for this project with a local image model (`tools/paint_emblems.py`, ComfyUI + Z-Image Turbo); none of them is
-game artwork.
+game artwork. The bundled fonts (IM Fell English, Alegreya) are under the SIL Open Font License.
 
 ## Not affiliated
 

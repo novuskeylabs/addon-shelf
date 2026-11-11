@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The Addon Shelf for WoW Forever</title>
+<title>LinuxForever Addon Shelf</title>
 <style>
 @font-face{font-family:"Alegreya";font-style:italic;font-weight:400;font-display:swap;src:url(/fonts/Alegreya-400i.ttf) format("truetype")}
 @font-face{font-family:"Alegreya";font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/Alegreya-400.ttf) format("truetype")}
@@ -24,8 +24,8 @@ svg.i{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:
 ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--brass) 33%,transparent);border-radius:9px;border:3px solid #0000;background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--brass) 67%,transparent);background-clip:padding-box}
 /* header */
 header{display:flex;align-items:center;gap:18px;padding:10px 28px 0;height:68px}
-h1{font:400 30px/1 "IM Fell English",serif;margin:0 0 10px;display:flex;align-items:center;gap:12px;white-space:nowrap;text-shadow:0 2px 6px #000a}
-h1 svg{width:34px;height:34px;filter:drop-shadow(0 2px 2px #0008)}h1 i{color:var(--brass)}
+h1{font:400 28px/1 "IM Fell English",serif;margin:0 0 10px;display:flex;align-items:center;gap:12px;white-space:nowrap;text-shadow:0 2px 6px #000a}
+h1 img{width:40px;height:40px;border-radius:9px;filter:drop-shadow(0 2px 3px #000a)}h1 i{color:var(--brass)}
 .realm{margin:0 0 10px;display:flex;align-items:center;gap:7px;font:500 14px Alegreya,serif;letter-spacing:.04em;color:var(--btn-ink);background:linear-gradient(var(--btn-a),var(--btn-b));border:1px solid var(--btn-line);border-radius:6px;padding:3px 11px;box-shadow:0 1px 0 #0006,inset 0 1px 0 #fff7;white-space:nowrap}
 .realm::before{content:"";width:8px;height:8px;transform:rotate(45deg);background:var(--ember);box-shadow:0 0 0 1.5px var(--danger-line)}
 #status{margin:0 0 10px;font-size:14.5px;padding:3px 12px;border-radius:99px;border:1px solid color-mix(in srgb,var(--brass) 27%,transparent);color:var(--text2);display:flex;align-items:center;gap:8px;white-space:nowrap}
@@ -149,7 +149,7 @@ body.locked [data-i],body.locked [data-u],body.locked [data-up],body.locked [dat
 .swo{display:flex;flex-direction:column;gap:8px;padding:8px;border-radius:14px;border:1px solid color-mix(in srgb,var(--brass) 27%,transparent);background:#0002;cursor:pointer;text-align:left;color:var(--text);transition:border-color .15s,background .15s}
 .swo:hover{border-color:var(--brass)}.swo[aria-pressed=true]{border-color:var(--brass2);background:color-mix(in srgb,var(--brass) 14%,transparent);box-shadow:0 0 0 2px var(--brass2)}
 .sw{display:block;border-radius:9px;overflow:hidden;pointer-events:none;color:var(--text);background:var(--grain),linear-gradient(var(--bg),var(--bg2))}
-.swt{display:block;padding:8px 14px;font:400 19px/1.2 "IM Fell English",serif;color:var(--text-hi);background:radial-gradient(120% 160% at 50% 0,var(--top-a),var(--top-b));border-bottom:2px solid var(--brass)}.swt i{color:var(--brass)}
+.swt{display:block;padding:8px 14px;font:400 17.5px/1.2 "IM Fell English",serif;color:var(--text-hi);background:radial-gradient(120% 160% at 50% 0,var(--top-a),var(--top-b));border-bottom:2px solid var(--brass)}.swt i{color:var(--brass)}
 .swb{display:block;padding:12px}.sw .tile{display:grid;width:100%}.swr{display:flex;align-items:center;gap:8px;margin-top:10px}
 .swn{display:flex;justify-content:space-between;align-items:baseline;padding:0 6px 2px;font-weight:500}.swn small{font-weight:400;color:var(--brass2)}
 /* my addons: content beside an always-visible conflicts panel */
@@ -228,7 +228,7 @@ function applyTheme(id){const t=THEMES.find(x=>x.id==id)||THEMES.find(x=>x.id=="
 let THEME=applyTheme(localStorage.theme);
 </script>
 <div id="prog"></div><div id="drop"><div>Drop the addon’s .zip to install it<small>An addon already on your shelf is updated in place and keeps a backup</small></div></div>
-<header><h1><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="50" width="48" height="6" rx="1" fill="#80583a"/><rect x="13" y="16" width="10" height="34" rx="1" fill="#6e2a22"/><rect x="25" y="10" width="12" height="40" rx="1" fill="#27405c"/><rect x="39" y="20" width="11" height="30" rx="1" fill="#7a4a1c"/><g fill="#f0cd7c"><rect x="13" y="21" width="10" height="3"/><rect x="25" y="16" width="12" height="3"/><rect x="39" y="25" width="11" height="3"/><rect x="13" y="42" width="10" height="3"/><rect x="25" y="42" width="12" height="3"/><rect x="39" y="42" width="11" height="3"/></g><path d="M29 4h4v12l-2-2-2 2z" fill="#e0672f"/></svg><span>The Addon <i>Shelf</i></span></h1><p class="realm" title="Only addons built for the World of Warcraft: Forever client are shown and managed">WoW Forever</p><span id="crest"></span><p id="status"></p>
+<header><h1><img src="/appicon.png" alt=""><span>LinuxForever <i>Addon Shelf</i></span></h1><p class="realm" title="Only addons built for the World of Warcraft: Forever client are shown and managed">WoW Forever</p><span id="crest"></span><p id="status"></p>
 <nav role="tablist"><button role="tab" data-v="lib" aria-selected="true">My addons<b id="badge" hidden></b></button><button role="tab" data-v="cat">Catalog</button><button role="tab" data-v="set">Settings</button></nav></header>
 <main>
 <section id="lib"><div class="libmain">
@@ -268,7 +268,7 @@ let busy=0,checked=0;const prog=d=>{busy+=d;$("#prog").classList.toggle("on",bus
 async function api(p,body){prog(1);try{return await api0(p,body)}finally{prog(-1)}}
 async function api0(p,body){let r,j;
  try{r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});j=await r.json()}
- catch{throw new Error("The app stopped answering. Close The Addon Shelf and open it again")}if(!r.ok)throw Object.assign(new Error(j.error||"Something went wrong"),{browser:j.browser});return j}
+ catch{throw new Error("The app stopped answering. Close LinuxForever Addon Shelf and open it again")}if(!r.ok)throw Object.assign(new Error(j.error||"Something went wrong"),{browser:j.browser});return j}
 // Authors who only allow downloads on CurseForge: show its download page in the app; the file it delivers is installed.
 async function viaBrowser(b,name){const t=tileOf(b.key);t&&t.classList.add("busy");toast(`${name} is only offered on CurseForge. Its download page is opening…`);
  try{const r=await api("fetch",b);S=r;draw();tileOf(b.key)?.classList.add("done");toast(`Installed ${r.installed}`);return true}
@@ -317,7 +317,7 @@ function draw(first){
  const n=S.addons.length,u=S.addons.filter(a=>a.update).length,loose=S.addons.filter(a=>a.source=="No source").length,f=$("#filter").value.toLowerCase();
  document.body.classList.toggle("locked",!!S.wow_running);$("#chk").title=checked?"Last checked "+ago2(checked):"";
  $("#status").textContent=S.wow_running?"World of Warcraft is running: changes are locked":"World of Warcraft is closed: safe to make changes";$("#status").className=S.wow_running?"locked":"";
- document.title=(u?`${u} update${u>1?"s":""} available - `:"")+"The Addon Shelf for WoW Forever";
+ document.title=(u?`${u} update${u>1?"s":""} available - `:"")+"LinuxForever Addon Shelf";
  const auto=S.addons.filter(a=>a.update&&!a.restricted).length;$("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!auto;$("#upall").textContent=`Update all ${auto}`;
  $("#hints").innerHTML=(S.has_cf_key?"":`<p class="hint"><span>CurseForge is not connected, so ${S.addons.filter(a=>a.source=="CurseForge").length} of your addons cannot be checked for updates.</span><button class="btn sm" data-go="set">Connect CurseForge</button></p>`)
   +(S.new_downloads||[]).filter(d=>!seen.has(d.path)).map(d=>`<p class="hint"><span>New download: <b>${esc(d.name)}</b> (${mb(d.size)}, ${ago(d.when)})</span><button class="btn sm" data-f="${esc(d.path)}">Install it</button><button class="btn sm quiet" data-x="${esc(d.path)}">Not an addon</button></p>`).join("")
@@ -348,7 +348,7 @@ async function act(route,key,done){const t=tileOf(key);t&&t.classList.add("busy"
   if(route!="remove"){const n=tileOf(key);n&&n.classList.add("done")}toast(done);return true}
  catch(e){if(e.browser)return viaBrowser(e.browser,S.addons.find(x=>x.key==key)?.name||"the addon");toast(e.message,1);t&&t.classList.remove("busy")}}
 $("#tiles").onclick=e=>{const u=e.target.closest("[data-up]"),t=e.target.closest(".tile");
- if(e.target.closest("[data-again]"))return api("check").then(n=>{S=n;draw();if(!S.game_missing)toast("Found your addon folder")}).catch(x=>toast(x.message,1));if(e.target.closest("[data-go]"))return show(e.target.closest("[data-go]").dataset.go);
+ if(e.target.closest("[data-again]"))return api("rescan",{}).then(n=>{S=n;draw();if(!S.game_missing)toast("Found your addon folder")}).catch(x=>toast(x.message,1));if(e.target.closest("[data-go]"))return show(e.target.closest("[data-go]").dataset.go);
  if(u){const a=S.addons.find(x=>x.key==u.dataset.up);act("install",a.key,`Updated ${a.name}`)}else if(t)t.dataset.k==sel?closePage():openPage(t.dataset.k)};
 $("#list").onclick=e=>{const u=e.target.closest("[data-up]"),r=e.target.closest("tr[data-k]");if(u){const a=S.addons.find(x=>x.key==u.dataset.up);u.disabled=true;act("install",a.key,`Updated ${a.name}`)}else if(r)openPage(r.dataset.k)};
 $("#hints").onclick=async e=>{const t=e.target;if(t.dataset.go)show(t.dataset.go);else if("retry" in t.dataset)$("#chk").click();else if(t.dataset.x){markSeen(t.dataset.x);draw()}
@@ -466,7 +466,7 @@ addEventListener("drop",async e=>{if(!hasFiles(e))return;e.preventDefault();drag
 setInterval(async()=>{if(busy||$("#dlg").open||document.hidden)return;try{const n=await api0("state");if(JSON.stringify(n)!=JSON.stringify(S)){S=n;draw()}}catch{}},20000);
 function themes(){const cur=THEMES.find(t=>t.id==THEME);$("#crest").innerHTML=crest(cur.art);$("#crest").hidden=!cur.art;$("#crest").title=cur.name;
  const card=t=>`<button class="swo" data-theme-pick="${t.id}" aria-pressed="${t.id==THEME}">
- <span class="sw" style="${Object.entries(themeVars(t)).map(([k,v])=>k+":"+v).join(";")}"><span class="swt"><span>The Addon <i>Shelf</i></span>${t.art?`<span class="swc">${crest(t.art)}</span>`:""}</span>
+ <span class="sw" style="${Object.entries(themeVars(t)).map(([k,v])=>k+":"+v).join(";")}"><span class="swt"><span>LinuxForever <i>Addon Shelf</i></span>${t.art?`<span class="swc">${crest(t.art)}</span>`:""}</span>
  <span class="swb"><span class="tile"><span class="ico">${sigil("example-addon")}</span><span class="nm">Example addon</span><span class="ver">1.0.0</span><span class="st"><span>Source</span><span>12 MB</span><span class="ok">Up to date</span></span></span>
  <span class="swr"><span class="btn sm">Install</span><span class="btn sm quiet">View all</span></span></span></span>
  <span class="swn">${esc(t.name)}${t.id==THEME?"<small>In use</small>":""}</span></button>`;

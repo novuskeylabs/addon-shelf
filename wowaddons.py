@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Addon manager for the WoW Forever client. The logic is stdlib only; the window is PySide6 (Qt WebEngine).
+"""LinuxForever Addon Shelf: an addon manager for the World of Warcraft: Forever client on Linux. The logic is stdlib only; the window is PySide6 (Qt WebEngine).
 Run `wowaddons` for the application, `wowaddons --selftest` for the built-in checks."""
 import calendar, fcntl, json, os, re, socket, zlib, shutil, subprocess, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile, secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 STARTED = time.time()
+APP = "LinuxForever Addon Shelf"
 HOME = Path.home()
 CONF = HOME / ".config/wowaddons"
 CACHE = HOME / ".cache/wowaddons"
@@ -13,7 +14,7 @@ BACKUPS = HOME / ".local/share/wowaddons/backups"
 STATE = CONF / "state.json"
 CF_KEY = CONF / "curseforge.key"
 HERE = Path(__file__).resolve().parent
-UA = "wowaddons/1.0 (personal addon manager)"
+UA = "LinuxForeverAddonShelf/1.0 (desktop addon manager)"
 CF_FOREVER = 88568          # CurseForge game-version type for the Forever client
 MAX_ZIP = 2 << 30
 # Where the addons installed before this tool existed came from (folder -> source key).
@@ -40,9 +41,55 @@ class GameMissing(RuntimeError):
     """World of Warcraft: Forever (or its AddOns folder) cannot be found."""
 
 
-def addons_dir():
-    """The Forever client's AddOns folder. Found once (the search walks ~/Games), remembered in state.json, and
-    looked for again if it disappears (game moved, reinstalled or uninstalled)."""
+SKIP = {"proc", "sys", "dev", "run", "snap", "node_modules", ".git", ".cache", ".cargo", ".npm", ".snapshots", ".Trash",
+        "Trash", "lost+found", "__pycache__", "site-packages", "dosdevices", "windows", "ProgramData", "users"}
+_SCAN = {"at": 0.0}
+
+
+def scan_for_game(budget=12):
+    """Look for the Forever client where Linux players usually have it (Lutris, Bottles, Heroic, Steam/Proton, plain Wine,
+    Flatpak versions of those, extra drives). Returns its AddOns folder, creating it if the game has none yet, or None."""
+    user = os.environ.get("USER", "")
+    roots = [HOME / "Games", HOME / ".wine", HOME / ".local/share/lutris", HOME / ".local/share/bottles", HOME / ".var/app",
+             HOME / ".local/share/Steam/steamapps", HOME / ".steam/steam/steamapps", HOME / "Bottles", HOME / "Lutris", HOME,
+             Path("/mnt"), Path("/media"), Path("/run/media") / user, Path("/opt"), Path("/games"), Path("/data")]
+    stop, seen, found = time.time() + budget, set(), []
+    for root in roots:
+        depth_cap = 5 if root == HOME else 10             # the home folder itself is only skimmed; the known places are searched deeply
+        for cur, dirs, _ in os.walk(root, followlinks=False, onerror=lambda e: None):
+            if time.time() > stop:
+                break
+            real = os.path.realpath(cur)
+            if real in seen:
+                dirs[:] = []
+                continue
+            seen.add(real)
+            if "_forever_" in dirs:
+                found.append(Path(cur) / "_forever_")
+            depth = len(Path(cur).relative_to(root).parts)
+            dirs[:] = [] if depth >= depth_cap else [d for d in dirs if d not in SKIP and d != "_forever_"
+                                                     and not (d.startswith(".") and depth == 0 and root == HOME and d not in (".wine", ".var", ".steam", ".local"))]
+        if found or time.time() > stop:
+            break
+    if not found:
+        return None
+    def score(g):                                         # a real install has the game program beside the folder contents
+        try:
+            return (any(f.lower().startswith("wow") and f.lower().endswith(".exe") for f in os.listdir(g)), g.stat().st_mtime)
+        except OSError:
+            return (False, 0)
+    game = max(found, key=score)
+    addons = game / "Interface" / "AddOns"
+    try:
+        addons.mkdir(parents=True, exist_ok=True)         # a fresh game install has no AddOns folder yet
+    except OSError:
+        return None
+    return addons
+
+
+def addons_dir(rescan=False):
+    """The Forever client's AddOns folder. Found by scanning on first start, remembered in state.json, and scanned for
+    again (at most once a minute unless asked) whenever it has gone missing: game moved, reinstalled or uninstalled."""
     global _DIR
     if _DIR is not None and _DIR.is_dir():
         return _DIR
@@ -51,17 +98,16 @@ def addons_dir():
     if st.get("addons_dir") and Path(st["addons_dir"]).is_dir():
         _DIR = Path(st["addons_dir"])
         return _DIR
-    r = subprocess.run(["find", str(HOME / "Games"), "-maxdepth", "7", "-type", "d", "-name", "_forever_", "-print", "-quit"],
-                       capture_output=True, text=True)
-    if not r.stdout.strip():
-        raise GameMissing("World of Warcraft: Forever was not found on this computer. Install it, or point the app at its "
-                          "Interface/AddOns folder in Settings")
-    found = Path(r.stdout.strip()) / "Interface" / "AddOns"
-    found.mkdir(parents=True, exist_ok=True)            # a fresh game install has no AddOns folder yet
-    st["addons_dir"] = str(found)
-    save(st)
-    _DIR = found
-    return _DIR
+    if rescan or time.time() - _SCAN["at"] > 60:
+        _SCAN["at"] = time.time()
+        found = scan_for_game()
+        if found:
+            st["addons_dir"] = str(found)
+            save(st)
+            _DIR = found
+            return _DIR
+    raise GameMissing("World of Warcraft: Forever was not found on this computer. Install it, or point the app at its "
+                      "Interface/AddOns folder in Settings")
 
 
 def set_addons_dir(path):
@@ -425,7 +471,17 @@ def sync():
 
 
 def wow_running():
-    return subprocess.run(["pgrep", "-f", r"Wow\.exe"], capture_output=True).returncode == 0
+    """Is the game running? Read from /proc so no extra program is needed."""
+    me = str(os.getpid())
+    for p in os.listdir("/proc"):
+        if p.isdigit() and p != me:
+            try:
+                with open(f"/proc/{p}/cmdline", "rb") as f:
+                    if re.search(rb"(?i)\bwow(classic|forever)?(-64)?\.exe", f.read(4096)):
+                        return True
+            except OSError:
+                pass
+    return False
 
 
 # ---------- sources ----------
@@ -1198,6 +1254,12 @@ class H(BaseHTTPRequestHandler):
                 r = {**app_update(), "restarting": bool(RESTART)}
                 if RESTART:
                     threading.Timer(1.5, RESTART).start()
+            elif route == "rescan":
+                try:
+                    addons_dir(rescan=True)
+                except GameMissing:
+                    pass
+                r = check()
             elif route == "folder":
                 set_addons_dir(body["path"])
                 r = view()
@@ -1255,6 +1317,8 @@ class H(BaseHTTPRequestHandler):
                 return self.send(b"", 403, "text/plain")
             png = icon_png(q.get("key", [""])[0])
             return self.send(png, ctype="image/png", cache="private, max-age=3600") if png else self.send(b"", 404, "text/plain")
+        if u.path == "/appicon.png":
+            return self.send((HERE / "icon-128.png").read_bytes(), ctype="image/png", cache="private, max-age=86400")
         m = re.fullmatch(r"/fonts/([A-Za-z0-9-]+\.(?:ttf|woff2))", u.path)   # fonts ship with the app: no font server needed
         if m and (HERE / "fonts" / m.group(1)).is_file():
             return self.send((HERE / "fonts" / m.group(1)).read_bytes(), ctype="font/ttf" if m.group(1).endswith("ttf") else "font/woff2",
@@ -1287,7 +1351,8 @@ def main():
         from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMenu, QMessageBox, QPushButton,
                                        QSystemTrayIcon, QVBoxLayout)
     except ImportError as e:
-        sys.exit(f"The Addon Shelf needs PySide6 with Qt WebEngine to show its window ({e}). On Arch: sudo pacman -S pyside6 qt6-webengine")
+        sys.exit(f"{APP} needs PySide6 with Qt WebEngine to show its window ({e}).\nRun ./install.sh in the app's folder: it sets "
+                 "that up in a private environment without touching your system packages.")
     CONF.mkdir(parents=True, exist_ok=True)
     guard = open(CONF / "lock", "w")                    # one copy at a time: two would overwrite each other's records
     try:
@@ -1295,7 +1360,7 @@ def main():
             fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
         box = QApplication(sys.argv[:1])
-        QMessageBox.information(None, "The Addon Shelf", "The Addon Shelf is already open.")
+        QMessageBox.information(None, APP, APP + " is already open.")
         sys.exit(0)
 
     H.token = secrets.token_urlsafe(24)
@@ -1303,9 +1368,12 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
 
     app = QApplication(sys.argv[:1])
-    app.setApplicationName("The Addon Shelf")
+    app.setApplicationName(APP)
     app.setDesktopFileName("wowaddons")
-    app.setWindowIcon(QIcon(str(HERE / "icon.svg")))
+    icon = QIcon()
+    for f in ("icon-32.png", "icon-48.png", "icon-64.png", "icon-128.png", "icon-256.png", "icon.png"):
+        icon.addFile(str(HERE / f))
+    app.setWindowIcon(icon)
     # keeps CurseForge's cookies and the chosen theme between runs; a capture run gets throwaway storage so it
     # cannot collide with the copy the user has open
     profile = QWebEngineProfile(app) if os.environ.get("WOWADDONS_SHOT") else QWebEngineProfile("wowaddons", app)
@@ -1318,7 +1386,7 @@ def main():
 
     view = QWebEngineView()
     view.setPage(Page(profile, view))
-    view.setWindowTitle("The Addon Shelf for WoW Forever")
+    view.setWindowTitle(APP)
     view.resize(1500, 950)
     # Never pull focus back to the app: pages loading must not activate the window, and after a slow start (when the
     # user has likely moved on to something else) the window appears without taking focus at all.
@@ -1432,21 +1500,21 @@ def main():
             raise_window()
             view.page().runJavaScript("show('lib');document.querySelector('#chk').click()")
 
-        tray = QSystemTrayIcon(QIcon(str(HERE / "icon.svg")), app)
+        tray = QSystemTrayIcon(icon, app)
         menu = QMenu()
-        menu.addAction("Open The Addon Shelf", raise_window)
+        menu.addAction("Open " + APP, raise_window)
         menu.addAction("Check for updates", check_now)
         menu.addSeparator()
         menu.addAction("Quit", app.quit)
         tray.setContextMenu(menu)
-        tray.setToolTip("The Addon Shelf for WoW Forever")
+        tray.setToolTip(APP)
         tray.activated.connect(toggle)
         tray.show()
 
     def titled(title):                                              # the page puts the update count in its title
-        view.setWindowTitle(title or "The Addon Shelf for WoW Forever")
+        view.setWindowTitle(title or APP)
         if tray:
-            tray.setToolTip(title or "The Addon Shelf for WoW Forever")
+            tray.setToolTip(title or APP)
     view.titleChanged.connect(titled)
     shot = os.environ.get("WOWADDONS_SHOT")                     # debugging aid: save a picture of the window, then quit
     if shot:                                                    # WOWADDONS_JS runs first, to put the window in the state to capture
