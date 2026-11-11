@@ -3,20 +3,22 @@
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 :root{--oak:#2b1d14;--oak2:#3a281b;--felt:#1d3b36;--felt2:#142b27;--vellum:#f1e4c4;--vellum2:#dccaa0;--paper:#f7ecd0;--brass:#c9a04f;--brass2:#f0cd7c;--ember:#e0672f;--ink:#1c120c;--muted:#6b563a;--line:#cdb986;--green:#2f6a3a;
- --r:10px;--sh1:0 1px 0 #0006,0 6px 14px #0005;--sh2:0 3px 0 #0006,0 16px 30px #0008;
+ --r:10px;--ease:cubic-bezier(.16,1,.3,1);--sh1:0 1px 2px #0006,0 8px 18px -6px #0009;--sh2:0 2px 4px #0006,0 20px 34px -10px #000c;
  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.3'/%3E%3C/svg%3E")}
 *{box-sizing:border-box}[hidden]{display:none!important}html,body{height:100%;margin:0}
 body{background:var(--grain),radial-gradient(120% 90% at 50% 0,#4a3322 0,var(--oak) 55%,#170f0a 100%);color:var(--vellum);font:16.5px/1.45 Alegreya,Georgia,serif;overflow:hidden}
-button,input,select{font:inherit;color:inherit}:focus-visible{outline:2px solid #fff3d6;outline-offset:2px}
+button,input,select{font:inherit;color:inherit}::selection{background:#c9a04f77;color:#fff8e6}input{caret-color:var(--brass2)}:root{accent-color:var(--brass)}
+h2,h3,.nm{text-wrap:balance}p{text-wrap:pretty}.num,.stats,.ver,.v,dd{font-variant-numeric:tabular-nums}
+svg.i{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}:focus-visible{outline:2px solid #fff3d6;outline-offset:2px}
 ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#c9a04f55;border-radius:9px;border:3px solid #0000;background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background:#c9a04faa;background-clip:padding-box}
 /* header */
 header{display:flex;align-items:center;gap:18px;padding:10px 28px 0;height:68px}
-h1{font:400 30px/1 "IM Fell English",serif;margin:0 0 10px;display:flex;align-items:center;gap:12px;white-space:nowrap;text-shadow:0 2px 0 #0008}
+h1{font:400 30px/1 "IM Fell English",serif;margin:0 0 10px;display:flex;align-items:center;gap:12px;white-space:nowrap;text-shadow:0 2px 6px #000a}
 h1 svg{width:34px;height:34px;filter:drop-shadow(0 2px 2px #0008)}h1 i{color:var(--brass)}
 .realm{margin:0 0 10px;display:flex;align-items:center;gap:7px;font:500 14px Alegreya,serif;letter-spacing:.04em;color:var(--ink);background:linear-gradient(#f3d58a,#c9973f);border:1px solid #7a5a22;border-radius:6px;padding:3px 11px;box-shadow:0 1px 0 #0006,inset 0 1px 0 #fff7;white-space:nowrap}
 .realm::before{content:"";width:8px;height:8px;transform:rotate(45deg);background:var(--ember);box-shadow:0 0 0 1.5px #7a2d10}
 #status{margin:0 0 10px;font-size:14.5px;padding:3px 12px;border-radius:99px;border:1px solid #c9a04f44;color:var(--vellum2);display:flex;align-items:center;gap:8px;white-space:nowrap}
-#status::before{content:"";width:8px;height:8px;border-radius:50%;background:#6fbf7a;box-shadow:0 0 8px #6fbf7a}#status.locked::before{background:var(--ember);box-shadow:0 0 8px var(--ember)}
+#status::before{content:"";width:8px;height:8px;border-radius:50%;background:#6fbf7a}#status.locked::before{background:var(--ember)}
 nav{display:flex;gap:4px;margin-left:auto;align-self:flex-end}
 nav button{font-weight:500;font-size:17px;color:var(--vellum2);background:#0003;border:1px solid #c9a04f33;border-bottom:0;padding:9px 20px 10px;border-radius:10px 10px 0 0;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
 nav button:hover{background:#0006;color:#fff3d6}nav button[aria-selected=true]{background:var(--felt);color:#fff3d6;border-color:var(--brass)}
@@ -29,37 +31,35 @@ main>section{flex:1;overflow:auto;padding:22px 28px 60px;display:none;min-width:
 .bar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}.bar .grow{flex:1;min-width:200px}
 .field{height:40px;padding:0 14px;border-radius:8px;border:1px solid #c9a04f77;background:#0e231f;color:#fff3d6;transition:border-color .15s,box-shadow .15s}
 .field:focus{outline:0;border-color:var(--brass2);box-shadow:0 0 0 3px #c9a04f33}.field::placeholder{color:#8fa79f}select.field{cursor:pointer}select.field option{background:#0e231f}
-.btn{display:inline-flex;align-items:center;justify-content:center;height:40px;font-weight:500;padding:0 18px;border-radius:8px;border:1px solid #7a5a22;background:linear-gradient(#ecca78,#bd8e3a);color:var(--ink);cursor:pointer;box-shadow:0 2px 0 #5d4317,inset 0 1px 0 #fff6;white-space:nowrap;text-decoration:none;transition:filter .15s,transform .08s}
-.btn:hover{filter:brightness(1.08)}.btn:active{transform:translateY(2px);box-shadow:inset 0 1px 0 #fff6}.btn[disabled],.btn[aria-disabled]{filter:grayscale(.7);opacity:.6;cursor:default}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:40px;font-weight:500;padding:0 18px;border-radius:8px;border:1px solid #7a5a22;background:linear-gradient(#ecca78,#bd8e3a);color:var(--ink);cursor:pointer;box-shadow:0 1px 2px #0007,0 4px 10px -4px #000a,inset 0 1px 0 #fff6;white-space:nowrap;text-decoration:none;transition:filter .15s,transform .1s var(--ease)}
+.btn:hover{filter:brightness(1.08)}.btn:active{transform:scale(.97)}.btn[disabled],.btn[aria-disabled]{filter:grayscale(.7);opacity:.6;cursor:default}
 .btn.quiet{background:#0000;color:var(--vellum);border-color:#c9a04f77;box-shadow:none}.btn.quiet:hover{background:#ffffff14;filter:none}
-.btn.danger{background:linear-gradient(#bb4d2e,#8a2f18);color:#ffe9dc;border-color:#5c1d0d;box-shadow:0 2px 0 #4a160a,inset 0 1px 0 #fff3}
+.btn.danger{background:linear-gradient(#bb4d2e,#8a2f18);color:#ffe9dc;border-color:#5c1d0d;box-shadow:0 1px 2px #0007,0 4px 10px -4px #000a,inset 0 1px 0 #fff3}
 .btn.sm{height:30px;padding:0 13px;font-size:15px;border-radius:7px}
 .seg{display:flex;height:40px;border:1px solid #c9a04f77;border-radius:8px;overflow:hidden}.seg button{background:none;border:0;padding:0 15px;cursor:pointer;color:var(--vellum2)}.seg button[aria-pressed=true]{background:var(--brass);color:var(--ink);font-weight:500}
-.hint{background:#0003;border:1px solid #c9a04f44;border-left:4px solid var(--brass);border-radius:8px;padding:9px 14px;margin:0 0 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.hint span{flex:1;min-width:220px}
+.hint{background:#0003;border:1px solid #c9a04f55;border-radius:8px;padding:9px 14px;margin:0 0 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.hint span{flex:1;min-width:220px}
 .note{color:#f0d9a8;margin:0}.empty{text-align:center;padding:50px 20px;color:#bcd0c8;font-size:19px}.warn{color:#8a2f18;font-weight:500}
-kbd{font:14px Alegreya,serif;border:1px solid #c9a04f88;border-bottom-width:2px;border-radius:4px;padding:0 6px;margin:0 2px}
+kbd{font:14px Alegreya,serif;border:1px solid #c9a04f88;border-radius:4px;padding:1px 7px;margin:0 2px;background:#0003}
 .src{font-weight:700}.src.CurseForge{color:#b5482a}.src.GitHub{color:#2c4a6e}.src.WoWInterface{color:#1f5a4f}
 /* section headings */
 h3.group{font:400 24px/1.2 "IM Fell English",serif;margin:26px 0 12px;display:flex;align-items:center;gap:14px;color:#fff3d6}
 h3.group::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#c9a04f88,#0000);order:1}
 h3.group small{font:14.5px Alegreya,serif;color:#a9c0b7;white-space:nowrap}h3.group .btn{order:2}
-#tiles h3.group:first-child,.csec:first-child h3.group{margin-top:2px}
+.csec:first-child h3.group{margin-top:2px}
 /* installed tiles */
-.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-.tile{position:relative;display:grid;grid-template-columns:64px minmax(0,1fr);grid-template-rows:46px 20px 30px;align-content:start;height:128px;gap:2px 14px;text-align:left;padding:14px 14px 12px 18px;border:0;border-radius:var(--r);cursor:pointer;color:var(--ink);overflow:hidden;
- background:var(--grain),linear-gradient(160deg,#fff8e4,#e8d6aa);box-shadow:var(--sh1),inset 0 1px 0 #fff9;transition:transform .2s cubic-bezier(.2,.9,.3,1.4),box-shadow .2s}
-.tile::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--c)}
-.tile:hover,.tile.sel{transform:translateY(-4px);box-shadow:var(--sh2),0 0 0 2px var(--brass2),inset 0 1px 0 #fff9}.tile:active{transform:translateY(-1px) scale(.985)}
-.tile .ico{grid-row:span 3;align-self:start;width:64px;height:64px;border-radius:12px;display:grid;place-items:center;font:400 26px "IM Fell English",serif;color:#fff3d6;background:radial-gradient(circle at 30% 25%,#fff3,#0000 60%),var(--c);box-shadow:0 3px 8px #0007,inset 0 0 0 1px #0004;overflow:hidden;transition:transform .25s cubic-bezier(.2,.9,.3,1.6)}
-.tile .ico img{width:100%;height:100%;object-fit:cover}.tile:hover .ico{transform:rotate(-5deg) scale(1.08)}
+#tiles{display:flex;flex-wrap:wrap;align-items:flex-start;gap:22px 30px}.tg{min-width:0;max-width:100%}.tg h3.group{margin:0 0 10px}
+.tgrid{display:flex;flex-wrap:wrap;gap:14px}.tile{width:300px;max-width:100%}
+.tile{position:relative;display:grid;grid-template-columns:64px minmax(0,1fr);grid-template-rows:46px 20px 30px;align-content:start;height:128px;gap:2px 14px;text-align:left;padding:14px 14px 12px;border:0;border-radius:var(--r);cursor:pointer;color:var(--ink);overflow:hidden;
+ background:var(--grain),linear-gradient(160deg,#fff8e4,#e8d6aa);box-shadow:var(--sh1),inset 0 1px 0 #fff9;transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.tile:hover,.tile.sel{transform:translateY(-2px);box-shadow:var(--sh2),0 0 0 2px var(--brass2),inset 0 1px 0 #fff9}.tile:active{transform:scale(.97);transition-duration:.1s}
+.tile .ico{grid-row:span 3;align-self:start;width:64px;height:64px;border-radius:12px;display:grid;place-items:center;font:400 26px "IM Fell English",serif;color:#fff3d6;background:radial-gradient(circle at 30% 25%,#fff3,#0000 60%),var(--c);box-shadow:0 3px 8px #0007,inset 0 0 0 1px #0004;overflow:hidden;transition:transform .18s var(--ease)}
+.tile .ico img{width:100%;height:100%;object-fit:cover}.tile:hover .ico{transform:scale(1.04)}
 .tile .nm{align-self:start;font:400 19.5px/1.17 "IM Fell English",serif;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tile .ver{font-size:14px;color:#5d4a33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tile .ver b{color:#a8401f}
 .tile .st{display:flex;white-space:nowrap;align-items:center;gap:10px;font-size:14px;color:#5d4a33;align-self:end;min-width:0}.tile .st .btn,.tile .ok{margin-left:auto}.tile .ok{color:var(--green);font-weight:500}
 .tile.upd{box-shadow:var(--sh1),0 0 0 2px var(--ember),inset 0 1px 0 #fff9}
-.tile.upd::after{content:"";position:absolute;top:0;right:14px;width:14px;height:22px;background:var(--ember);clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%);animation:glow 1.6s ease-in-out infinite alternate}
-@keyframes glow{to{filter:brightness(1.4) drop-shadow(0 0 5px #ff9a4f)}}
-#tiles.first .tile{animation:rise .4s backwards cubic-bezier(.2,.9,.3,1.2);animation-delay:calc(var(--i)*22ms)}@keyframes rise{from{opacity:0;transform:translateY(16px) scale(.97)}}
-.tile.busy{pointer-events:none}.tile.busy .ico{animation:work 1s ease-in-out infinite}@keyframes work{50%{transform:scale(.88) rotate(8deg);filter:brightness(1.3)}}
+.tile.upd::after{content:"";position:absolute;top:0;right:14px;width:14px;height:22px;background:var(--ember);clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%)}
+.tile.busy{pointer-events:none}
 .tile.busy::after,.card.busy::after{content:"";position:absolute;inset:0;width:auto;height:auto;clip-path:none;background:linear-gradient(100deg,#0000 30%,#fff9 50%,#0000 70%);background-size:220% 100%;animation:sh 1s linear infinite}
 .tile.done{animation:done .9s ease-out}@keyframes done{0%{box-shadow:0 0 0 0 #6fbf7a,var(--sh1);transform:scale(1.04)}100%{box-shadow:0 0 0 18px #6fbf7a00,var(--sh1)}}
 .tile.gone{animation:gone .28s forwards ease-in}@keyframes gone{to{opacity:0;transform:scale(.85)}}
@@ -93,12 +93,12 @@ aside .btn.quiet,dialog .btn.quiet{color:var(--ink);border-color:#7a5a22}aside .
 .chips button[aria-pressed=true]{background:var(--brass);color:var(--ink);border-color:var(--brass);font-weight:500}.chips small{opacity:.7;margin-left:5px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
 .card{position:relative;display:grid;grid-template-columns:68px minmax(0,1fr);grid-template-rows:48px 44px 1fr;gap:6px 14px;height:188px;text-align:left;padding:14px;border:0;border-radius:var(--r);cursor:pointer;color:var(--ink);overflow:hidden;
- background:var(--grain),linear-gradient(160deg,#fff8e4,#e8d6aa);box-shadow:var(--sh1),inset 0 1px 0 #fff9;transition:transform .2s cubic-bezier(.2,.9,.3,1.4),box-shadow .2s}
-.card:hover{transform:translateY(-4px);box-shadow:var(--sh2),0 0 0 2px var(--brass2),inset 0 1px 0 #fff9}.card:active{transform:translateY(-1px) scale(.99)}
-.card .th{position:relative;grid-row:span 2;width:68px;height:68px}.card .th img,.card .th .ph{width:68px;height:68px;border-radius:12px;object-fit:cover;background:var(--oak2);box-shadow:0 3px 8px #0006,inset 0 0 0 1px #0004;transition:transform .25s cubic-bezier(.2,.9,.3,1.6)}
-.card:hover .th img,.card:hover .th .ph{transform:rotate(-4deg) scale(1.06)}
+ background:var(--grain),linear-gradient(160deg,#fff8e4,#e8d6aa);box-shadow:var(--sh1),inset 0 1px 0 #fff9;transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
+.card:hover{transform:translateY(-2px);box-shadow:var(--sh2),0 0 0 2px var(--brass2),inset 0 1px 0 #fff9}.card:active{transform:scale(.98);transition-duration:.1s}
+.card .th{position:relative;grid-row:span 2;width:68px;height:68px}.card .th img,.card .th .ph{width:68px;height:68px;border-radius:12px;object-fit:cover;background:var(--oak2);box-shadow:0 3px 8px #0006,inset 0 0 0 1px #0004;transition:transform .18s var(--ease)}
+.card:hover .th img,.card:hover .th .ph{transform:scale(1.04)}
 .ph{display:grid;place-items:center;font:400 30px "IM Fell English",serif;color:var(--brass)}
-.card .tick{position:absolute;right:-6px;bottom:-6px;width:24px;height:24px;border-radius:50%;background:var(--green);border:2px solid #f3e6c4;display:grid;place-items:center;color:#fff;font:700 13px/1 sans-serif;box-shadow:0 2px 4px #0006}
+.card .tick{position:absolute;right:-6px;bottom:-6px;width:24px;height:24px;border-radius:50%;background:var(--green);border:2px solid #f3e6c4;display:grid;place-items:center;color:#fff;font-size:13px;box-shadow:0 2px 4px #0006}
 .card .tt{min-width:0;display:flex;flex-direction:column;justify-content:center}
 .card .nm{font:400 20px/1.15 "IM Fell English",serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .who{font-size:14px;color:#5d4a33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -108,15 +108,15 @@ aside .btn.quiet,dialog .btn.quiet{color:var(--ink);border-color:#7a5a22}aside .
 .skel{height:188px;border-radius:var(--r);background:linear-gradient(100deg,#efe1c018 30%,#efe1c038 50%,#efe1c018 70%);background-size:200% 100%;animation:sh 1.2s linear infinite}@keyframes sh{to{background-position:-200% 0}}
 /* details dialog */
 dialog{border:0;padding:0;width:min(1000px,94vw);max-height:90vh;border-radius:14px;background:var(--grain),var(--vellum);color:var(--ink);box-shadow:0 0 0 2px var(--brass),0 30px 80px #000c;overflow:hidden}
-dialog[open]{height:min(900px,90vh);display:flex;flex-direction:column;animation:pop .22s cubic-bezier(.3,1.3,.5,1)}@keyframes pop{from{transform:scale(.95);opacity:0}}
+dialog[open]{height:min(900px,90vh);display:flex;flex-direction:column;animation:pop .2s var(--ease)}@keyframes pop{from{transform:scale(.97);opacity:0}}
 dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
 .dhead,.dfoot{flex:none}.dhead{display:flex;gap:18px;padding:22px 26px 16px;align-items:flex-start;border-bottom:1px solid #b9a577}
 .dhead img{width:84px;height:84px;border-radius:12px;object-fit:cover;background:var(--oak2);box-shadow:0 3px 8px #0006}.dhead div{flex:1;min-width:0}
-.dhead .x{background:none;border:0;font-size:30px;line-height:1;cursor:pointer;color:var(--muted);padding:0 4px}
+.dhead .x{background:none;border:0;font-size:24px;line-height:1;border-radius:6px;cursor:pointer;color:var(--muted);padding:0 4px}
 .stats{display:flex;flex-wrap:wrap;gap:6px 24px;margin:8px 0 0;font-size:15px;color:#4b3b28}.stats b{font-weight:700;color:var(--ink)}
 .dbody{overflow-y:auto;overflow-x:hidden;padding:18px 26px 8px;flex:1 1 auto;min-height:0}
 .shot{position:relative;background:#120c08;border-radius:10px;overflow:hidden;aspect-ratio:16/9;display:grid;place-items:center}.shot img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in}
-.shot button{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;background:#000a;color:#fff;font-size:28px;cursor:pointer}.shot .p{left:0;border-radius:0 8px 8px 0}.shot .n{right:0;border-radius:8px 0 0 8px}
+.shot button{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;background:#000a;color:#fff;font-size:22px;cursor:pointer;display:grid;place-items:center}.shot .p{left:0;border-radius:0 8px 8px 0}.shot .n{right:0;border-radius:8px 0 0 8px}
 .thumbs{display:flex;gap:8px;margin:10px 0 4px;overflow-x:auto;padding-bottom:4px}.thumbs img{height:58px;border-radius:6px;cursor:pointer;opacity:.6;border:2px solid #0000}.thumbs img.on{opacity:1;border-color:var(--ember)}
 .tabs{display:flex;gap:6px;margin:16px 0 0;border-bottom:1px solid #b9a577}.tabs button{background:none;border:0;border-bottom:3px solid #0000;padding:6px 14px;cursor:pointer;color:var(--muted);font-weight:500}.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--ember)}
 #desc{width:100%;border:0;min-height:240px;margin-top:12px}
@@ -126,10 +126,11 @@ dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
 #drop{position:fixed;inset:14px;z-index:90;border:3px dashed var(--brass2);border-radius:18px;background:#0b0705dd;display:none;place-items:center;text-align:center;font:400 32px "IM Fell English",serif;color:#fff3d6}
 #drop.on{display:grid}#drop small{display:block;font:17px Alegreya,serif;color:var(--vellum2);margin-top:8px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,90px);display:flex;gap:10px;align-items:center;background:var(--ink);color:var(--vellum);border:1px solid var(--brass);padding:10px 20px;border-radius:10px;transition:transform .3s;max-width:80vw;z-index:99;box-shadow:0 10px 30px #000a}
-#toast::before{content:"✓";color:#8fd49a;font-weight:700}#toast.bad::before{content:"!";color:var(--ember)}#toast.on{transform:translate(-50%,0)}#toast.bad{border-color:var(--ember);color:#ffd9c7}
+#toast svg{font-size:18px;color:#8fd49a}#toast.bad svg{color:var(--ember)}#toast.on{transform:translate(-50%,0)}#toast.bad{border-color:var(--ember);color:#ffd9c7}
 @media (max-width:1180px){#status{display:none}}
 @media (max-width:860px){aside.on{position:absolute;inset:0;width:100%;z-index:5}aside>div{width:100%}h1 span{display:none}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-property:opacity,color,background-color,border-color,box-shadow!important}}
+body.locked [data-i],body.locked [data-u],body.locked [data-up],body.locked [data-a=install],body.locked [data-a=remove],body.locked [data-a=rollback],body.locked [data-d=install],body.locked [data-d=remove]{filter:grayscale(.8);opacity:.5;pointer-events:none}
 </style></head><body>
 <div id="prog"></div><div id="drop"><div>Drop the addon’s .zip to install it<small>An addon already on your shelf is updated in place and keeps a backup</small></div></div>
 <header><h1><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="50" width="48" height="6" rx="1" fill="#80583a"/><rect x="13" y="16" width="10" height="34" rx="1" fill="#6e2a22"/><rect x="25" y="10" width="12" height="40" rx="1" fill="#27405c"/><rect x="39" y="20" width="11" height="30" rx="1" fill="#7a4a1c"/><g fill="#f0cd7c"><rect x="13" y="21" width="10" height="3"/><rect x="25" y="16" width="12" height="3"/><rect x="39" y="25" width="11" height="3"/><rect x="13" y="42" width="10" height="3"/><rect x="25" y="42" width="12" height="3"/><rect x="39" y="42" width="11" height="3"/></g><path d="M29 4h4v12l-2-2-2 2z" fill="#e0672f"/></svg><span>The Addon <i>Shelf</i></span></h1><p class="realm" title="Only addons built for the World of Warcraft: Forever client are shown and managed">WoW Forever</p><p id="status"></p>
@@ -161,17 +162,19 @@ dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
 const T="__TOKEN__",$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const seen=new Set(JSON.parse(sessionStorage.seen||"[]")),markSeen=p=>{seen.add(p);sessionStorage.seen=JSON.stringify([...seen])};
 let S={addons:[]},sel=null,view=localStorage.view=="list"?"list":"tiles",R=[],srcOn="All",shots=[],si=0;
-let busy=0;const prog=d=>{busy+=d;$("#prog").classList.toggle("on",busy>0)};
+const ICON={check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>',left:'<path d="M15 5l-7 7 7 7"/>',right:'<path d="M9 5l7 7-7 7"/>',alert:'<path d="M12 7v6M12 17h.01"/>'},ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+let busy=0,checked=0;const prog=d=>{busy+=d;$("#prog").classList.toggle("on",busy>0)};
 async function api(p,body){if(p!="ping")prog(1);try{return await api0(p,body)}finally{if(p!="ping")prog(-1)}}
 async function api0(p,body){const r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw Object.assign(new Error(j.error||"Something went wrong"),{browser:j.browser});return j}
 // Authors who only allow downloads on CurseForge: show its download page in the app; the file it delivers is installed.
 async function viaBrowser(b,name){const t=tileOf(b.key);t&&t.classList.add("busy");toast(`${name} is only offered on CurseForge. Its download page is opening…`);
  try{const r=await api("fetch",b);S=r;draw();tileOf(b.key)?.classList.add("done");toast(`Installed ${r.installed}`);return true}
  catch(e){toast(e.message,1);tileOf(b.key)?.classList.remove("busy")}}
-function toast(m,bad){const t=$("#toast");t.textContent=m;t.className="on"+(bad?" bad":"");clearTimeout(toast.t);toast.t=setTimeout(()=>t.className="",bad?8000:3200)}
+function toast(m,bad){const t=$("#toast");t.innerHTML=ic(bad?"alert":"check")+"<span></span>";t.lastChild.textContent=m;t.className="on"+(bad?" bad":"");clearTimeout(toast.t);toast.t=setTimeout(()=>t.className="",bad?8000:3200)}
 const hash=s=>[...s].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7),LEATHER=["#6e2a22","#27405c","#2f5131","#5a3a1e","#4c2c52","#7a4a1c","#1f4a4a","#5c2338"];
 const mb=n=>n>1<<30?(n/2**30).toFixed(1)+" GB":Math.max(1,Math.round(n/2**20))+" MB",compact=new Intl.NumberFormat("en",{notation:"compact",maximumFractionDigits:1});
 function ago(t){if(!t)return"";const d=(Date.now()/1000-t)/86400;return d<1?"today":d<2?"yesterday":d<31?Math.floor(d)+" days ago":d<365?(m=>m<2?"last month":m+" months ago")(Math.floor(d/30.4)):new Date(t*1000).toLocaleDateString(undefined,{year:"numeric",month:"short"})}
+const ago2=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m==1?"a minute ago":m+" minutes ago"};
 const color=a=>LEATHER[hash(a.key)%8];
 const mono=n=>n.replace(/[^A-Za-z0-9 ]/g,"").split(/\s+|(?<=[a-z])(?=[A-Z])/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("");
 function tile(a,i){const none=a.source=="No source";
@@ -181,6 +184,7 @@ function tile(a,i){const none=a.source=="No source";
  <span class="st"><span class="src ${a.source}">${esc(a.source)}</span><span>${mb(a.size)}</span>${a.update?`<span class="btn sm" role="button" data-up="${esc(a.key)}">${a.restricted?"Get on CurseForge":"Update"}</span>`:a.latest?`<span class="ok">Up to date</span>`:""}</span></button>`}
 function draw(first){
  const n=S.addons.length,u=S.addons.filter(a=>a.update).length,loose=S.addons.filter(a=>a.source=="No source").length,f=$("#filter").value.toLowerCase();
+ document.body.classList.toggle("locked",!!S.wow_running);$("#chk").title=checked?"Last checked "+ago2(checked):"";
  $("#status").textContent=S.wow_running?"World of Warcraft is running: changes are locked":"World of Warcraft is closed: safe to make changes";$("#status").className=S.wow_running?"locked":"";
  const auto=S.addons.filter(a=>a.update&&!a.restricted).length;$("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!auto;$("#upall").textContent=`Update all ${auto}`;
  $("#hints").innerHTML=(S.has_cf_key?"":`<p class="hint"><span>CurseForge is not connected, so ${S.addons.filter(a=>a.source=="CurseForge").length} of your addons cannot be checked for updates.</span><button class="btn sm" data-go="set">Connect CurseForge</button></p>`)
@@ -190,7 +194,7 @@ function draw(first){
  $("#tiles").hidden=view!="tiles";$("#list").hidden=view!="list";$$(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view==view));
  const shown=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)),groups={};shown.forEach(a=>(groups[a.category]??=[]).push(a));let i=0;
  $("#tiles").className=first?"first":"";
- $("#tiles").innerHTML=shown.length?[...(S.categories||[]).filter(c=>groups[c]),...Object.keys(groups).filter(c=>!(S.categories||[]).includes(c))].map(c=>`<h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div>`).join(""):`<p class="empty">No addon matches “${esc($("#filter").value)}”.</p>`;
+ $("#tiles").innerHTML=shown.length?[...(S.categories||[]).filter(c=>groups[c]),...Object.keys(groups).filter(c=>!(S.categories||[]).includes(c))].map(c=>`<div class="tg"><h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div></div>`).join(""):`<p class="empty" style="flex:1">No addon matches “${esc($("#filter").value)}”.</p>`;
  $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
  $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent="Addon folder: "+(S.addons_dir||"");
  if(sel)openPage(sel)}
@@ -219,7 +223,7 @@ $("#page").onclick=e=>{const b=e.target.closest("[data-a]");if(!b)return;const a
  if(x=="close")closePage();else if(x=="find"){show("cat");$("#q").value=a.name.replace(/\s*[-–(\[].*$/,"");find()}else if(x=="info")info(a.key)
  else if(x=="install")act("install",a.key,`${a.update?"Updated":"Reinstalled"} ${a.name}`);else if(x=="rollback")act("rollback",a.key,`Restored the previous version of ${a.name}`);
  else if(x=="remove"){if(b.dataset.sure)act("remove",a.key,`Removed ${a.name}. A copy is kept in case you want it back.`);else{b.dataset.sure=1;b.textContent="Click again to remove"}}};
-$("#chk").onclick=async e=>{e.target.disabled=true;e.target.textContent="Checking…";try{S=await api("check");draw();const u=S.addons.filter(a=>a.update).length;toast(u?`${u} addons have a newer version`:"Everything linked is up to date")}catch(x){toast(x.message,1)}e.target.disabled=false;e.target.textContent="Check for updates"};
+$("#chk").onclick=async e=>{e.target.disabled=true;e.target.textContent="Checking…";try{S=await api("check");checked=Date.now();draw();const u=S.addons.filter(a=>a.update).length;toast(u?`${u} addons have a newer version`:"Everything linked is up to date")}catch(x){toast(x.message,1)}e.target.disabled=false;e.target.textContent="Check for updates"};
 $("#upall").onclick=async e=>{e.target.disabled=true;const todo=S.addons.filter(a=>a.update&&!a.restricted),rest=S.addons.filter(a=>a.update&&a.restricted).length;let ok=0;
  for(const [i,a] of todo.entries()){toast(`Updating ${i+1} of ${todo.length}: ${a.name}…`);if(await act("install",a.key,`Updated ${a.name}`))ok++}
  toast(rest?`${ok} updated. ${rest} more are only offered on CurseForge: use “Get on CurseForge” on those tiles`:ok==todo.length?"Everything is up to date":`${ok} of ${todo.length} updated`,ok<todo.length);e.target.disabled=false};
@@ -232,7 +236,7 @@ const have=x=>S.addons.some(a=>a.key==x.key)||!!(S.also||{})[x.key],mine=k=>(S.a
 const rowOf=k=>[...R,...Object.values(TOP).flatMap(t=>t.rows||[]),...(LIST?LIST.rows:[])].find(x=>x.key==k);
 const thumb=(x,c="")=>x.thumb?`<img class="${c}" src="${esc(x.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;ph ${c}&quot;>${esc(x.name[0])}</div>'">`:`<div class="ph ${c}">${esc(x.name[0])}</div>`;
 const actBtn=x=>have(x)?`<span class="btn sm danger" role="button" data-u="${esc(x.key)}">Uninstall</span>`:`<span class="btn sm" role="button" data-i="${esc(x.key)}">Install</span>`;
-function card(x){return `<button class="card" data-k="${esc(x.key)}"><span class="th">${thumb(x)}${have(x)?'<i class="tick" title="Installed">✓</i>':""}</span>
+function card(x){return `<button class="card" data-k="${esc(x.key)}"><span class="th">${thumb(x)}${have(x)?'<i class="tick" title="Installed">${ic("check")}</i>':""}</span>
  <span class="tt"><span class="nm">${esc(x.name)}</span><span class="who">by ${esc(x.author||"unknown")}</span></span><p class="sum">${esc(x.summary||"")}</p>
  <span class="meta"><span class="stats"><span class="src ${x.source}">${x.source}</span><span>${compact.format(x.downloads)} ${x.stars?"stars":"downloads"}</span>${x.updated?`<span>Updated ${ago(x.updated)}</span>`:""}</span>
  <span class="v">${x.version?esc(x.version):""}</span>${actBtn(x)}</span></button>`}
@@ -283,8 +287,8 @@ async function info(key){const d=$("#dlg");d.innerHTML=`<div class="dbody"><p cl
  let x;try{x=await api("details?key="+encodeURIComponent(key))}catch(e){d.innerHTML=`<div class="dbody"><p class="warn">${esc(e.message)}</p></div><div class="dfoot"><span></span><button class="btn quiet" data-d="close">Close</button></div>`;return}
  shots=x.shots||[];
  d.innerHTML=`<div class="dhead">${x.thumb?`<img src="${esc(x.thumb)}" alt="">`:""}<div><h2>${esc(x.name)}</h2><p class="by" style="margin:0">by ${esc(x.author)}${x.summary?" — "+esc(x.summary):""}</p>
-  <p class="stats"><span class="src ${x.source}">${x.source}</span><span><b>${Number(x.downloads).toLocaleString()}</b> ${x.stars?"stars":"downloads"}</span>${x.updated?`<span>Updated <b>${ago(x.updated)}</b></span>`:""}${x.version?`<span>Version <b>${esc(x.version)}</b></span>`:""}<span>${esc(x.category)}</span></p></div><button class="x" data-d="close" aria-label="Close">×</button></div>
- <div class="dbody">${shots.length?`<div class="shot"><img id="big" alt="Screenshot of ${esc(x.name)}">${shots.length>1?'<button class="p" data-d="prev" aria-label="Previous screenshot">‹</button><button class="n" data-d="next" aria-label="Next screenshot">›</button>':""}</div>${shots.length>1?`<div class="thumbs">${shots.map((s,i)=>`<img src="${esc(s)}" data-t="${i}" alt="" loading="lazy">`).join("")}</div>`:""}`:""}
+  <p class="stats"><span class="src ${x.source}">${x.source}</span><span><b>${Number(x.downloads).toLocaleString()}</b> ${x.stars?"stars":"downloads"}</span>${x.updated?`<span>Updated <b>${ago(x.updated)}</b></span>`:""}${x.version?`<span>Version <b>${esc(x.version)}</b></span>`:""}<span>${esc(x.category)}</span></p></div><button class="x" data-d="close" aria-label="Close">${ic("x")}</button></div>
+ <div class="dbody">${shots.length?`<div class="shot"><img id="big" alt="Screenshot of ${esc(x.name)}">${shots.length>1?'<button class="p" data-d="prev" aria-label="Previous screenshot">'+ic("left")+'</button><button class="n" data-d="next" aria-label="Next screenshot">'+ic("right")+'</button>':""}</div>${shots.length>1?`<div class="thumbs">${shots.map((s,i)=>`<img src="${esc(s)}" data-t="${i}" alt="" loading="lazy">`).join("")}</div>`:""}`:""}
   <div class="tabs" role="tablist"><button role="tab" data-tab="html" aria-selected="true">About</button>${x.changelog?'<button role="tab" data-tab="changelog" aria-selected="false">What’s new</button>':""}</div>
   <iframe id="desc" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" title="Description"></iframe></div>
  <div class="dfoot"><span>${shots.length?shots.length+" screenshots":"No screenshots published"}</span>${x.page?`<a class="btn quiet" href="${esc(x.page)}" target="_blank" rel="noopener">Open on ${x.source}</a>`:""}${have(x)?`<span style="margin:0;color:#2f6a3a;font-weight:500">Installed</span><button class="btn danger" data-d="remove">Uninstall</button>`:`<button class="btn" data-d="install">Install</button>`}</div>`;
@@ -313,5 +317,5 @@ addEventListener("drop",async e=>{if(!hasFiles(e))return;e.preventDefault();drag
   prog(1);try{const r=await fetch("/api/upload",{method:"POST",headers:{"X-Token":T,"X-Name":encodeURIComponent(f.name)},body:f}),j=await r.json();if(!r.ok)throw new Error(j.error);S=j;show("lib");draw();toast(`Installed ${j.installed}`)}catch(x){toast(x.message,1)}finally{prog(-1)}}});
 setInterval(async()=>{if(busy||$("#dlg").open||document.hidden)return;try{const n=await api0("state");if(JSON.stringify(n)!=JSON.stringify(S)){S=n;draw()}}catch{}},20000);
 setInterval(()=>api("ping").catch(()=>{}),30000);
-api("state").then(s=>{S=s;api("check").then(n=>{S=n;draw()}).catch(()=>{});const h=decodeURIComponent(location.hash.slice(1));show(h=="cat"?"cat":"lib");draw(true);if(h.startsWith("info="))info(h.slice(5));else if(h&&h!="cat")openPage(h)}).catch(e=>toast(e.message,1));
+api("state").then(s=>{S=s;api("check").then(n=>{S=n;checked=Date.now();draw()}).catch(()=>{});const h=decodeURIComponent(location.hash.slice(1));show(h=="cat"?"cat":"lib");draw(true);if(h.startsWith("info="))info(h.slice(5));else if(h&&h!="cat")openPage(h)}).catch(e=>toast(e.message,1));
 </script></body></html>
