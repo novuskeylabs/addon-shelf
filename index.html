@@ -31,23 +31,6 @@ section{flex:1;overflow:auto;padding:24px 32px 70px;display:none;scrollbar-color
 .btn.sm{padding:4px 12px;font-size:15.5px}
 .seg{display:flex;border:1px solid #c9a04f88;border-radius:8px;overflow:hidden}.seg button{background:none;border:0;padding:8px 14px;cursor:pointer;color:var(--vellum2)}.seg button[aria-pressed=true]{background:var(--brass);color:var(--ink);font-weight:500}
 .hint{background:#0003;border:1px solid #c9a04f55;border-left:4px solid var(--brass);border-radius:6px;padding:10px 16px;margin:0 0 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}.hint span{flex:1;min-width:240px}
-.legend{display:flex;gap:20px;color:#bcd0c8;font-size:15px;margin:18px 4px 0;flex-wrap:wrap}.legend i{display:inline-block;width:11px;height:16px;border-radius:2px;margin-right:7px;vertical-align:-2px}
-/* shelf */
-#shelf{display:flex;flex-wrap:wrap;align-items:flex-end;gap:0 5px;row-gap:26px;padding:0 16px 26px;
- background:repeating-linear-gradient(to bottom,#0000 0 262px,#5b3d25 262px 265px,#80583a 265px 281px,#2a1a0f 281px 288px);border-radius:4px}
-.spine{position:relative;height:var(--h);width:var(--w);margin-top:calc(262px - var(--h));border:0;padding:0;cursor:pointer;color:#f6e7c3;
- background:linear-gradient(90deg,#0007,#fff2 16%,#0000 42%,#0006),var(--c);border-radius:3px 3px 1px 1px;box-shadow:inset 0 0 0 1px #0006,2px 0 5px #0007;
- transition:transform .25s cubic-bezier(.3,1.5,.5,1),filter .2s;animation:drop .5s backwards cubic-bezier(.3,1.3,.5,1);animation-delay:calc(var(--i)*26ms)}
-.spine::before,.spine::after{content:"";position:absolute;left:0;right:0;height:9px;background:linear-gradient(var(--brass2),#9a7430);box-shadow:0 1px 0 #0006}
-.spine::before{top:16px}.spine::after{bottom:16px}
-.spine span{position:absolute;inset:34px 0;writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;font:400 17px/1.05 "IM Fell English",serif;overflow:hidden;white-space:nowrap;text-shadow:0 1px 0 #000a}
-.spine:hover,.spine.sel{transform:translateY(-14px);filter:brightness(1.12)}
-.spine.loose{background:linear-gradient(90deg,#0004,#fff2 16%,#0000 42%,#0004),#93876d;color:#2a2118}.spine.loose::before,.spine.loose::after{background:#5d5442}.spine.loose span{text-shadow:none}
-.spine.dim{opacity:.18}
-.spine .mark{position:absolute;top:-14px;left:50%;width:12px;height:44px;margin-left:-6px;background:var(--ember);clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);animation:glow 1.6s ease-in-out infinite alternate}
-.spine.busy{animation:busy .5s linear infinite}
-@keyframes drop{from{transform:translateY(-60px);opacity:0}}@keyframes glow{to{filter:brightness(1.5) drop-shadow(0 0 6px #ff9a4f)}}
-@keyframes busy{25%{transform:translateY(-14px) rotate(-1.5deg)}75%{transform:translateY(-14px) rotate(1.5deg)}}
 /* list view */
 #list,.tbl{width:100%;border-collapse:collapse;background:var(--vellum);color:var(--ink);border-radius:8px;overflow:hidden;box-shadow:0 4px 0 #0005}
 #list th{text-align:left;font-weight:700;padding:10px 14px;background:#dcc999;border-bottom:1px solid #b9a577}
@@ -110,19 +93,6 @@ section.on{animation:fade .22s ease}@keyframes fade{from{opacity:0;transform:tra
 h1{display:flex;align-items:center;gap:12px}h1 svg{width:36px;height:36px;filter:drop-shadow(0 2px 2px #0008)}
 #prog{position:fixed;top:0;left:0;right:0;height:3px;z-index:100;background:linear-gradient(90deg,#0000,var(--brass2),var(--ember),#0000);background-size:50% 100%;background-repeat:no-repeat;opacity:0;transition:opacity .2s}
 #prog.on{opacity:1;animation:slide 1.1s linear infinite}@keyframes slide{from{background-position:-50% 0}to{background-position:150% 0}}
-#shelf{padding:0 22px 26px;border-left:12px solid #4a2f1c;border-right:12px solid #4a2f1c;border-radius:6px;
- background:repeating-linear-gradient(to bottom,#0000 0 262px,#a57a4f 262px 264px,#80583a 264px 280px,#3a2415 280px 288px),linear-gradient(90deg,#0006,#0000 8%,#0000 92%,#0006),repeating-linear-gradient(to bottom,#0b1a17aa 0 262px,#0000 262px 288px);
- box-shadow:inset 0 0 0 1px #0006,0 10px 30px #0006}
-.spine{box-shadow:inset 0 0 0 1px #0007,inset 3px 0 6px #fff1,3px 0 6px #0008}
-.spine span{background:linear-gradient(180deg,#fff3c9,#d9b25c);-webkit-background-clip:text;background-clip:text;color:#0000;text-shadow:none;filter:drop-shadow(0 1px 0 #0009);letter-spacing:.02em}
-.spine.loose span{background:none;color:#2a2118;filter:none}
-.spine.o1::before,.spine.o1::after{height:3px;box-shadow:0 6px 0 var(--brass),0 1px 0 #0006}
-.spine span{font-size:var(--f,17px)}.spine.o2 span{inset:34px 0 60px}
-.spine.o2 i{position:absolute;left:50%;bottom:36px;width:13px;height:13px;margin-left:-6.5px;transform:rotate(45deg);border:2px solid var(--brass2);box-shadow:inset 0 0 0 2px #0004}
-.spine.loose i{border-color:#5d5442}
-.spine:hover,.spine.sel{transform:translateY(-16px) rotate(-.6deg)}
-#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--vellum);border:1px solid var(--brass);border-radius:8px;padding:8px 14px;font-size:15.5px;line-height:1.35;max-width:300px;box-shadow:0 8px 24px #000a;opacity:0;transform:translateY(6px);transition:opacity .12s,transform .12s}
-#tip.on{opacity:1;transform:none}#tip b{font:400 19px "IM Fell English",serif;display:block;color:#fff3d6}#tip em{color:#ffb38a;font-style:normal}
 aside h2{display:flex;gap:12px;align-items:flex-start}aside h2::before{content:"";flex:none;width:12px;height:34px;border-radius:2px;background:var(--pc,#6e2a22);box-shadow:inset 0 0 0 1px #0005}
 .badge{display:inline-block;font-size:14.5px;padding:1px 10px;border-radius:99px;background:#2f5131;color:#eaf6e4;margin-bottom:10px}.badge.new{background:var(--ember);color:#fff}.badge.loose{background:#8d8168;color:#1c120c}
 kbd{font:14px Alegreya,serif;border:1px solid #c9a04f88;border-bottom-width:2px;border-radius:4px;padding:0 6px;margin:0 2px}
@@ -132,17 +102,42 @@ kbd{font:14px Alegreya,serif;border:1px solid #c9a04f88;border-bottom-width:2px;
 #drop{position:fixed;inset:14px;z-index:90;border:3px dashed var(--brass2);border-radius:18px;background:#0b0705dd;display:none;place-items:center;text-align:center;font:400 34px "IM Fell English",serif;color:#fff3d6}
 #drop.on{display:grid}#drop small{display:block;font:18px Alegreya,serif;color:var(--vellum2);margin-top:8px}
 #toast{display:flex;gap:10px;align-items:center;box-shadow:0 10px 30px #000a}#toast::before{content:"✓";color:#8fd49a;font-weight:700}#toast.bad::before{content:"!";color:var(--ember)}
+
+/* --- tiles --- */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.tile{position:relative;display:grid;grid-template-columns:64px 1fr;grid-template-rows:auto auto 1fr;gap:2px 14px;text-align:left;padding:14px;border:0;border-radius:12px;cursor:pointer;color:var(--ink);overflow:hidden;
+ background:linear-gradient(160deg,#fff8e4,#e6d3a6);box-shadow:0 2px 0 #0007,0 8px 18px #0006,inset 0 1px 0 #fff9;
+ transition:transform .2s cubic-bezier(.2,.9,.3,1.4),box-shadow .2s}
+.tile::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--c)}
+.tile:hover,.tile.sel{transform:translateY(-5px);box-shadow:0 4px 0 #0007,0 20px 36px #0009,0 0 0 2px var(--brass2),inset 0 1px 0 #fff9}
+.tile:active{transform:translateY(-1px) scale(.985)}
+.tile .ico{grid-row:span 3;width:64px;height:64px;border-radius:12px;display:grid;place-items:center;font:400 27px "IM Fell English",serif;color:#fff3d6;
+ background:radial-gradient(circle at 30% 25%,#fff3,#0000 60%),var(--c);box-shadow:0 3px 8px #0007,inset 0 0 0 1px #0004;overflow:hidden;transition:transform .25s cubic-bezier(.2,.9,.3,1.6)}
+.tile .ico img{width:100%;height:100%;object-fit:cover}
+.tile:hover .ico{transform:rotate(-5deg) scale(1.1)}
+.tile .nm{font:400 20px/1.15 "IM Fell English",serif;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .ver{font-size:14.5px;color:#5d4a33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tile .ver b{color:#a8401f}
+.tile .st{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:14px;color:#5d4a33;align-self:end;margin-top:6px}.tile .st .btn{margin-left:auto}.tile .ok{margin-left:auto;color:#2f6a3a;font-weight:500}
+.tile.upd{box-shadow:0 2px 0 #0007,0 8px 18px #0006,0 0 0 2px var(--ember),inset 0 1px 0 #fff9}
+.tile.upd::after{content:"";position:absolute;top:0;right:14px;width:14px;height:22px;background:var(--ember);clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%);animation:glow 1.6s ease-in-out infinite alternate}
+@keyframes glow{to{filter:brightness(1.4) drop-shadow(0 0 5px #ff9a4f)}}
+#tiles.first .tile{animation:rise .45s backwards cubic-bezier(.2,.9,.3,1.2);animation-delay:calc(var(--i)*24ms)}@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.97)}}
+.tile.busy{pointer-events:none}.tile.busy .ico{animation:work 1s ease-in-out infinite}@keyframes work{50%{transform:scale(.88) rotate(8deg);filter:brightness(1.3)}}
+.tile.busy::after,.card.busy::after{content:"";position:absolute;inset:0;width:auto;height:auto;clip-path:none;background:linear-gradient(100deg,#0000 30%,#fff9 50%,#0000 70%);background-size:220% 100%;animation:sh 1s linear infinite}
+.tile.done{animation:done .9s ease-out}@keyframes done{0%{box-shadow:0 0 0 0 #6fbf7a,0 8px 18px #0006;transform:scale(1.04)}100%{box-shadow:0 0 0 18px #6fbf7a00,0 8px 18px #0006}}
+.tile.gone{animation:gone .28s forwards ease-in}@keyframes gone{to{opacity:0;transform:scale(.85)}}
+#tiles h3.group:first-child{margin-top:4px}
 </style></head><body>
-<canvas id="embers"></canvas><div id="prog"></div><div id="tip"></div><div id="drop"><div>Drop the addon’s .zip to install it<small>An addon already on your shelf is updated in place and keeps a backup</small></div></div>
+<canvas id="embers"></canvas><div id="prog"></div><div id="drop"><div>Drop the addon’s .zip to install it<small>An addon already on your shelf is updated in place and keeps a backup</small></div></div>
 <header><h1><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="50" width="48" height="6" rx="1" fill="#80583a"/><rect x="13" y="16" width="10" height="34" rx="1" fill="#6e2a22"/><rect x="25" y="10" width="12" height="40" rx="1" fill="#27405c"/><rect x="39" y="20" width="11" height="30" rx="1" fill="#7a4a1c"/><g fill="#f0cd7c"><rect x="13" y="21" width="10" height="3"/><rect x="25" y="16" width="12" height="3"/><rect x="39" y="25" width="11" height="3"/><rect x="13" y="42" width="10" height="3"/><rect x="25" y="42" width="12" height="3"/><rect x="39" y="42" width="11" height="3"/></g><path d="M29 4h4v12l-2-2-2 2z" fill="#e0672f"/></svg><span>The Addon <i>Shelf</i></span></h1><p id="status"></p>
 <nav role="tablist"><button role="tab" data-v="lib" aria-selected="true">My addons<b id="badge" hidden></b></button><button role="tab" data-v="cat">Catalog</button><button role="tab" data-v="set">Settings</button></nav></header>
 <main>
 <section id="lib">
  <div class="bar"><input class="field grow" id="filter" placeholder="Filter my addons" autocomplete="off">
-  <div class="seg" role="group" aria-label="View"><button data-view="shelf" aria-pressed="true">Shelf</button><button data-view="list" aria-pressed="false">List</button></div>
+  <div class="seg" role="group" aria-label="View"><button data-view="tiles" aria-pressed="true">Tiles</button><button data-view="list" aria-pressed="false">List</button></div>
   <button class="btn quiet" id="chk">Check for updates</button><button class="btn" id="upall" hidden>Update all</button></div>
- <div id="hints"></div><div id="shelf"></div><table id="list" hidden><thead><tr><th>Addon</th><th>Installed</th><th>Newest</th><th>Source</th><th>Size</th><th></th></tr></thead><tbody></tbody></table>
- <p class="legend" id="legend"></p></section>
+ <div id="hints"></div><div id="tiles"></div><table id="list" hidden><thead><tr><th>Addon</th><th>Installed</th><th>Newest</th><th>Source</th><th>Size</th><th></th></tr></thead><tbody></tbody></table>
+</section>
 <section id="cat">
  <div class="bar"><input class="field grow" id="q" placeholder="Search the catalog, or paste a GitHub link" autocomplete="off"><button class="btn" id="go">Search</button>
   <select class="field" id="sort" aria-label="Sort"><option value="cat">By category, most popular first</option><option value="pop">Most popular</option><option value="new">Recently updated</option><option value="name">Name</option></select></div>
@@ -162,7 +157,7 @@ kbd{font:14px Alegreya,serif;border:1px solid #c9a04f88;border-bottom-width:2px;
 <script>
 const T="__TOKEN__",$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const seen=new Set(JSON.parse(sessionStorage.seen||"[]")),markSeen=p=>{seen.add(p);sessionStorage.seen=JSON.stringify([...seen])};
-let S={addons:[]},sel=null,view=localStorage.view||"shelf",R=[],srcOn="All",shots=[],si=0;
+let S={addons:[]},sel=null,view=localStorage.view=="list"?"list":"tiles",R=[],srcOn="All",shots=[],si=0;
 let busy=0;const prog=d=>{busy+=d;$("#prog").classList.toggle("on",busy>0)};
 async function api(p,body){if(p!="ping")prog(1);try{return await api0(p,body)}finally{if(p!="ping")prog(-1)}}
 async function api0(p,body){const r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw new Error(j.error||"Something went wrong");return j}
@@ -170,43 +165,53 @@ function toast(m,bad){const t=$("#toast");t.textContent=m;t.className="on"+(bad?
 const hash=s=>[...s].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7),LEATHER=["#6e2a22","#27405c","#2f5131","#5a3a1e","#4c2c52","#7a4a1c","#1f4a4a","#5c2338"];
 const mb=n=>n>1<<30?(n/2**30).toFixed(1)+" GB":Math.max(1,Math.round(n/2**20))+" MB",compact=new Intl.NumberFormat("en",{notation:"compact",maximumFractionDigits:1});
 function ago(t){if(!t)return"";const d=(Date.now()/1000-t)/86400;return d<1?"today":d<2?"yesterday":d<31?Math.floor(d)+" days ago":d<365?(m=>m<2?"last month":m+" months ago")(Math.floor(d/30.4)):new Date(t*1000).toLocaleDateString(undefined,{year:"numeric",month:"short"})}
-const color=a=>a.source=="Unlinked"?"#93876d":LEATHER[hash(a.key)%8];
+const color=a=>LEATHER[hash(a.key)%8];
+const mono=n=>n.replace(/[^A-Za-z0-9 ]/g,"").split(/\s+|(?<=[a-z])(?=[A-Z])/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("");
+function tile(a,i){const none=a.source=="No source";
+ return `<button class="tile${a.update?" upd":""}${a.key==sel?" sel":""}" data-k="${esc(a.key)}" style="--c:${color(a)};--i:${i}">
+ <span class="ico">${a.icon?`<img src="/icon?key=${encodeURIComponent(a.key)}&t=${T}" alt="" onerror="this.replaceWith(document.createTextNode('${mono(a.name)}'))">`:mono(a.name)}</span>
+ <span class="nm">${esc(a.name)}</span><span class="ver">${esc(a.version||"version unknown")}${a.update?`<b> → ${esc(a.latest.slice(0,24))}</b>`:""}</span>
+ <span class="st"><span class="src ${a.source}">${esc(a.source)}</span><span>${mb(a.size)}</span>${a.update?`<span class="btn sm" role="button" data-up="${esc(a.key)}">Update</span>`:a.latest?`<span class="ok">Up to date</span>`:""}</span></button>`}
 function draw(first){
- const n=S.addons.length,u=S.addons.filter(a=>a.update).length,loose=S.addons.filter(a=>a.source=="Unlinked").length,f=$("#filter").value.toLowerCase();
+ const n=S.addons.length,u=S.addons.filter(a=>a.update).length,loose=S.addons.filter(a=>a.source=="No source").length,f=$("#filter").value.toLowerCase();
  $("#status").textContent=S.wow_running?"World of Warcraft is running: changes are locked":"World of Warcraft is closed: safe to make changes";$("#status").className=S.wow_running?"locked":"";
  $("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!u;$("#upall").textContent=`Update all ${u}`;
  $("#hints").innerHTML=(S.has_cf_key?"":`<p class="hint"><span>CurseForge is not connected, so ${S.addons.filter(a=>a.source=="CurseForge").length} of your addons cannot be checked for updates.</span><button class="btn sm" data-go="set">Connect CurseForge</button></p>`)
   +(S.new_downloads||[]).filter(d=>!seen.has(d.path)).map(d=>`<p class="hint"><span>New download: <b>${esc(d.name)}</b> (${mb(d.size)}, ${ago(d.when)})</span><button class="btn sm" data-f="${esc(d.path)}">Install it</button><button class="btn sm quiet" data-x="${esc(d.path)}">Not an addon</button></p>`).join("")
-  +(loose?`<p class="hint"><span>${loose} addons were added by hand and have no source to update from. Open one and choose “Find in catalog” to link it.</span></p>`:"");
- $("#legend").innerHTML=`<span>${n} addons</span><span><i style="background:#6e2a22"></i>Linked to a source</span><span><i style="background:#93876d"></i>Added by hand</span><span><i style="background:var(--ember)"></i>Newer version available</span>`;
- $("#shelf").hidden=view!="shelf";$("#list").hidden=view!="list";$$(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view==view));
- $("#shelf").innerHTML=S.addons.map((a,i)=>{const h=hash(a.key),w=Math.round(38+Math.min(44,Math.log2(1+a.size/2**20)*5));
-  return `<button class="spine o${h%3}${a.source=="Unlinked"?" loose":""}${a.key==sel?" sel":""}${f&&!a.name.toLowerCase().includes(f)?" dim":""}" data-k="${esc(a.key)}" aria-label="${esc(a.name)}" style="--h:${196+h%58}px;--w:${w}px;--c:${color(a)};--i:${first?i:0};--f:${a.name.length>22?13:a.name.length>16?15:17}px">${a.update?'<b class="mark"></b>':""}<span>${esc(a.name)}</span><i></i></button>`}).join("");
- $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source=="Unlinked"?"Added by hand":a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
+  +(loose?`<p class="hint"><span>${loose} addons have no source recorded, so they cannot be checked for updates. Open one and choose “Find in catalog” to link it.</span></p>`:"");
+ $("#tiles").hidden=view!="tiles";$("#list").hidden=view!="list";$$(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view==view));
+ const shown=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)),groups={};shown.forEach(a=>(groups[a.category]??=[]).push(a));let i=0;
+ $("#tiles").className=first?"first":"";
+ $("#tiles").innerHTML=shown.length?(S.categories||[]).filter(c=>groups[c]).map(c=>`<h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div>`).join(""):`<p class="empty">No addon matches “${esc($("#filter").value)}”.</p>`;
+ $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
  $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent="Addon folder: "+(S.addons_dir||"");
  if(sel)openPage(sel)}
-function openPage(k){const a=S.addons.find(x=>x.key==k);if(!a){closePage();return}sel=k;$$(".spine").forEach(s=>s.classList.toggle("sel",s.dataset.k==k));const loose=a.source=="Unlinked";
+function openPage(k){const a=S.addons.find(x=>x.key==k);if(!a){closePage();return}sel=k;$$(".tile").forEach(s=>s.classList.toggle("sel",s.dataset.k==k));const loose=a.source=="No source";
  $("#page").style.setProperty("--pc",color(a));
- $("#page>div").innerHTML=`<span class="badge ${a.update?"new":loose?"loose":""}">${a.update?"Newer version available":loose?"Added by hand":a.latest?"Up to date":"Linked to "+esc(a.source)}</span><h2>${esc(a.name)}</h2><p class="by">${esc(a.notes||"No description in the addon.")}</p>
- <dl><dt>Installed</dt><dd>${esc(a.version||"unknown")}</dd>${a.latest?`<dt>Newest</dt><dd>${esc(a.latest)}</dd>`:""}<dt>Source</dt><dd>${esc(loose?"Added by hand":a.source)}</dd><dt>Size</dt><dd>${mb(a.size)}</dd><dt>Folders</dt><dd>${a.folders.length>3?a.folders.length+" folders, starting with "+esc(a.folders[0]):a.folders.map(esc).join(", ")}</dd></dl>
+ $("#page>div").innerHTML=`<span class="badge ${a.update?"new":loose?"loose":""}">${a.update?"Newer version available":loose?"No source recorded":a.latest?"Up to date":"Linked to "+esc(a.source)}</span><h2>${esc(a.name)}</h2><p class="by">${esc(a.notes||"No description in the addon.")}</p>
+ <dl><dt>Installed</dt><dd>${esc(a.version||"unknown")}</dd>${a.latest?`<dt>Newest</dt><dd>${esc(a.latest)}</dd>`:""}<dt>Source</dt><dd>${esc(a.source)}</dd><dt>Category</dt><dd><select class="field" data-cat style="padding:3px 8px;background:#fff7e0;color:var(--ink)">${(S.categories||[]).map(c=>`<option${c==a.category?" selected":""}>${esc(c)}</option>`).join("")}</select></dd><dt>Size</dt><dd>${mb(a.size)}</dd><dt>Folders</dt><dd>${a.folders.length>3?a.folders.length+" folders, starting with "+esc(a.folders[0]):a.folders.map(esc).join(", ")}</dd></dl>
  ${a.error?`<p class="warn">${esc(a.error)}</p>`:""}${loose?`<p>There is nowhere to check this addon for updates yet. Find it in the catalog and install it from there to link it.</p>`:""}
  <div class="acts">${loose?`<button class="btn" data-a="find">Find in catalog</button>`:`<button class="btn" data-a="install">${a.update?"Update":"Reinstall"}</button><button class="btn quiet" data-a="info">Screenshots and details</button>`}
  ${a.can_rollback?`<button class="btn quiet" data-a="rollback">Restore previous version</button>`:""}<button class="btn danger" data-a="remove">Remove</button><button class="btn quiet" data-a="close">Close</button></div>`;
  $("#page").classList.add("on")}
-function closePage(){sel=null;$("#page").classList.remove("on");$$(".spine.sel").forEach(s=>s.classList.remove("sel"))}
-async function act(route,key,done){const sp=$(`.spine[data-k="${CSS.escape(key)}"]`);sp&&sp.classList.add("busy");
- try{S=await api(route,{key});if(route=="remove")closePage();draw();toast(done);return true}catch(e){toast(e.message,1)}finally{sp&&sp.classList.remove("busy")}}
-$("#shelf").onclick=e=>{const s=e.target.closest(".spine");if(s)s.dataset.k==sel?closePage():openPage(s.dataset.k)};
+function closePage(){sel=null;$("#page").classList.remove("on");$$(".tile.sel").forEach(s=>s.classList.remove("sel"))}
+const tileOf=k=>$(`.tile[data-k="${CSS.escape(k)}"]`);
+async function act(route,key,done){const t=tileOf(key);t&&t.classList.add("busy");
+ try{const r=await api(route,{key});if(route=="remove"){closePage();if(t){t.classList.add("gone");await new Promise(z=>setTimeout(z,280))}}S=r;draw();
+  if(route!="remove"){const n=tileOf(key);n&&n.classList.add("done")}toast(done);return true}catch(e){toast(e.message,1);t&&t.classList.remove("busy")}}
+$("#tiles").onclick=e=>{const u=e.target.closest("[data-up]"),t=e.target.closest(".tile");
+ if(u){const a=S.addons.find(x=>x.key==u.dataset.up);act("install",a.key,`Updated ${a.name}`)}else if(t)t.dataset.k==sel?closePage():openPage(t.dataset.k)};
 $("#list").onclick=e=>{const u=e.target.closest("[data-up]"),r=e.target.closest("tr[data-k]");if(u){const a=S.addons.find(x=>x.key==u.dataset.up);u.disabled=true;act("install",a.key,`Updated ${a.name}`)}else if(r)openPage(r.dataset.k)};
 $("#hints").onclick=async e=>{const t=e.target;if(t.dataset.go)show(t.dataset.go);else if(t.dataset.x){markSeen(t.dataset.x);draw()}
  else if(t.dataset.f){t.disabled=true;try{const r=await api("install_file",{path:t.dataset.f});markSeen(t.dataset.f);S=r;draw();toast(`Installed ${r.installed}`)}catch(x){t.disabled=false;toast(x.message,1)}}};
 $("#filter").oninput=()=>draw();$(".seg").onclick=e=>{if(e.target.dataset.view){view=localStorage.view=e.target.dataset.view;draw()}};
+$("#page").onchange=async e=>{if(e.target.matches("[data-cat]"))try{S=await api("category",{key:sel,category:e.target.value});draw();toast("Moved to "+e.target.value)}catch(x){toast(x.message,1)}};
 $("#page").onclick=e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=S.addons.find(x=>x.key==sel),x=b.dataset.a;
  if(x=="close")closePage();else if(x=="find"){show("cat");$("#q").value=a.name.replace(/\s*[-–(\[].*$/,"");find()}else if(x=="info")info(a.key)
  else if(x=="install")act("install",a.key,`${a.update?"Updated":"Reinstalled"} ${a.name}`);else if(x=="rollback")act("rollback",a.key,`Restored the previous version of ${a.name}`);
  else if(x=="remove"){if(b.dataset.sure)act("remove",a.key,`Removed ${a.name}. A copy is kept in case you want it back.`);else{b.dataset.sure=1;b.textContent="Click again to remove"}}};
 $("#chk").onclick=async e=>{e.target.disabled=true;e.target.textContent="Checking…";try{S=await api("check");draw();const u=S.addons.filter(a=>a.update).length;toast(u?`${u} addons have a newer version`:"Everything linked is up to date")}catch(x){toast(x.message,1)}e.target.disabled=false;e.target.textContent="Check for updates"};
-$("#upall").onclick=async e=>{e.target.disabled=true;$$(".spine").forEach(s=>s.querySelector(".mark")&&s.classList.add("busy"));
+$("#upall").onclick=async e=>{e.target.disabled=true;$$(".tile.upd").forEach(s=>s.classList.add("busy"));
  try{const r=await api("update_all",{});S=r;draw();const f=Object.entries(r.failed||{});toast(f.length?"Could not update "+f.map(([n,m])=>n+": "+m).join("; "):"Updated everything",f.length)}catch(x){toast(x.message,1);draw()}e.target.disabled=false};
 function show(v){$$("section").forEach(s=>s.classList.toggle("on",s.id==v));$$("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v==v));if(v!="lib")closePage();if(v=="cat"&&!R.length)find()}
 $("nav").onclick=e=>{const b=e.target.closest("[data-v]");b&&show(b.dataset.v)};
@@ -228,8 +233,8 @@ function paint(){const counts={All:R.length};R.forEach(r=>counts[r.source]=(coun
  else $("#results").innerHTML=`<div class="grid">${rows.sort(mode=="pop"?pop:mode=="new"?(a,b)=>b.updated-a.updated:(a,b)=>a.name.localeCompare(b.name)).map(card).join("")}</div>`}
 $("#go").onclick=find;$("#q").onkeydown=e=>e.key=="Enter"&&find();$("#sort").onchange=paint;$("#catnote").onclick=e=>e.target.dataset.go&&show(e.target.dataset.go);
 $("#srcs").onclick=e=>{const b=e.target.closest("[data-s]");if(b){srcOn=b.dataset.s;paint()}};
-async function install(key,name,btn){if(btn){btn.textContent="Installing…";btn.setAttribute("aria-disabled","true")}
- try{S=await api("install",{key});const r=R.find(x=>x.key==key);if(r)r.installed=true;draw();paint();toast(`Installed ${name}`);return true}catch(x){toast(x.message,1);if(btn){btn.textContent="Install";btn.removeAttribute("aria-disabled")}}}
+async function install(key,name,btn){if(btn){btn.textContent="Installing…";btn.setAttribute("aria-disabled","true");btn.closest(".card")?.classList.add("busy")}
+ try{S=await api("install",{key});const r=R.find(x=>x.key==key);if(r)r.installed=true;draw();paint();toast(`Installed ${name}`);return true}catch(x){toast(x.message,1);if(btn){btn.textContent="Install";btn.removeAttribute("aria-disabled");btn.closest(".card")?.classList.remove("busy")}}}
 $("#results").onclick=e=>{const i=e.target.closest("[data-i]"),c=e.target.closest(".card");if(i){e.stopPropagation();if(!i.hasAttribute("aria-disabled")){const r=R.find(x=>x.key==i.dataset.i);install(r.key,r.name,i)}}else if(c)info(c.dataset.k)};
 /* details dialog */
 function shot(i){si=(i+shots.length)%shots.length;$("#big").src=shots[si];$$(".thumbs img").forEach((t,j)=>t.classList.toggle("on",j==si))}
@@ -254,11 +259,6 @@ $("#dlg").onkeydown=e=>{if(shots.length>1){if(e.key=="ArrowLeft")shot(si-1);if(e
 $("#savekey").onclick=async()=>{const k=$("#key").value.trim();if(!k)return toast("Paste the key first",1);try{await api("key",{key:k});$("#key").value="";S=await api("state");R=[];draw();toast("Key saved")}catch(e){toast(e.message,1)}};
 $("#scan").onclick=async()=>{try{const r=await api("downloads");$("#files").innerHTML=r.files.length?`<table class="tbl" style="margin-bottom:20px"><tbody>${r.files.map(f=>`<tr><td>${esc(f.name)}</td><td>${mb(f.size)}</td><td>${ago(f.when)}</td><td><button class="btn sm" data-f="${esc(f.path)}">Install</button></td></tr>`).join("")}</tbody></table>`:`<p>No .zip files in Downloads.</p>`}catch(e){toast(e.message,1)}};
 $("#files").onclick=async e=>{const b=e.target.closest("[data-f]");if(!b)return;b.disabled=true;try{const r=await api("install_file",{path:b.dataset.f});S=r;draw();b.textContent="Installed";toast(`Installed ${r.installed}`)}catch(x){b.disabled=false;toast(x.message,1)}};
-const tip=$("#tip");
-$("#shelf").onmouseover=e=>{const sp=e.target.closest(".spine");if(!sp)return;const a=S.addons.find(x=>x.key==sp.dataset.k),r=sp.getBoundingClientRect();
- tip.innerHTML=`<b>${esc(a.name)}</b>${esc(a.version||"version unknown")}${a.update?` <em>→ ${esc(a.latest)}</em>`:""}<br>${a.source=="Unlinked"?"Added by hand":esc(a.source)}, ${mb(a.size)}`;
- tip.classList.add("on");const w=tip.offsetWidth;tip.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+"px";tip.style.top=Math.max(8,r.top-tip.offsetHeight-22)+"px"};
-$("#shelf").onmouseout=e=>{if(!e.relatedTarget||!e.relatedTarget.closest||!e.relatedTarget.closest(".spine"))tip.classList.remove("on")};
 addEventListener("keydown",e=>{const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
  if(e.key=="/"&&!typing&&!$("#dlg").open){e.preventDefault();const lib=$("#lib").classList.contains("on");if(!lib)show("cat");(lib?$("#filter"):$("#q")).focus()}
  else if(e.key=="Escape"&&!$("#dlg").open){if(typing)document.activeElement.blur();else closePage()}});

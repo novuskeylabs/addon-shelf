@@ -17,7 +17,12 @@ CF_FOREVER = 88568          # CurseForge game-version type for the Forever clien
 MAX_ZIP = 2 << 30
 # Where the addons installed before this tool existed came from (folder -> source key).
 SEED = {"DialogueUI": "gh:Peterodox/YUI-Dialogue", "AllTheThings": "gh:ATTWoWAddon/AllTheThings",
-        "Lueur": "cf:1732324", "OpulentCastingBars": "cf:1471957"}
+        "Lueur": "cf:1732324", "OpulentCastingBars": "cf:1471957", "Auctionator": "cf:6124", "Disenchantry": "cf:1704637",
+        "ForeverDungeonJournal": "cf:1707971", "ForeverLibrary": "cf:1721133", "Wowdee": "cf:1731877",
+        "Mastercraft": "cf:1711528", "ForeverXPbar": "cf:1701700", "ForeverChallengeXP": "cf:1701700",
+        "WaypointUI": "cf:1275146", "Attune": "cf:414434", "ForeverWisp": "cf:1698137", "EasyMarksForever": "cf:1723093",
+        "DynamicCam": "cf:101120", "GearQuestForever": "cf:1698950", "Leatrix_Plus": "cf:94855", "OpenMap": "cf:1735937",
+        "TalentsForeverBook": "cf:1700435", "WhatsTraining": "cf:324944"}
 LOCK = threading.Lock()
 
 
@@ -88,6 +93,56 @@ def folder_size(names):
     return total
 
 
+CATEGORIES = ["Quests & Leveling", "Map & Navigation", "Collections", "Professions", "Auctions & Economy", "Class & Talents",
+              "Combat", "Dungeons & Raids", "Interface", "Other"]
+# ponytail: keyword guess from the addon's own name/notes; the user can override per addon in its page
+KEYWORDS = [("Auctions & Economy", "auction|econom|vendor|gold"), ("Professions", "profession|craft|disenchant|gather|recipe"),
+            ("Map & Navigation", "map|waypoint|coord|navigat|pin"), ("Collections", "collect|transmog|mount|pet |achievement"),
+            ("Class & Talents", "talent|class|spell|train"), ("Dungeons & Raids", "dungeon|raid|boss|journal"),
+            ("Combat", "combat|cast|nameplate|damage|threat|target|mark"),
+            ("Quests & Leveling", "quest|level|xp|experience|attun|gear|book|lore|library"),
+            ("Interface", "ui|interface|dialog|camera|frame|chat|bag|tooltip|highlight|tweak|quality")]
+
+
+def guess_category(t, name):
+    declared = (t.get("category-enus") or t.get("category") or t.get("x-category") or "").lower()
+    for text in (declared, f"{name} {t.get('title', '')}".lower(), t.get("notes", "").lower()):   # most reliable first
+        for cat, pat in KEYWORDS:
+            if text and re.search(pat, text):
+                return cat
+    return "Other"
+
+
+def icon_png(key):
+    """PNG bytes of the addon's own icon (the file its .toc names), or None. Needs Pillow; without it tiles show a monogram."""
+    a = load()["addons"].get(key)
+    if not a:
+        return None
+    out = CACHE / "icons" / (re.sub(r"[^\w.-]", "_", key) + ".png")
+    src = None
+    ref = toc(a["folders"][0]).get("icontexture", "").split("[")[0].strip().replace("\\", "/")
+    m = re.match(r"interface/addons/(.+)", ref, re.I)
+    if m:
+        base = addons_dir()
+        for part in m.group(1).split("/"):                      # WoW paths are case-insensitive, the disk is not
+            names = {c.name.lower(): c for c in base.iterdir()} if base.is_dir() else {}
+            base = names.get(part.lower()) or next((names[part.lower() + e] for e in (".blp", ".tga", ".png", ".jpg")
+                                                    if part.lower() + e in names), base / "\0missing")
+        src = base if base.is_file() and base.resolve().is_relative_to(addons_dir().resolve()) else None
+    if not src:
+        return None
+    if not out.exists() or out.stat().st_mtime < src.stat().st_mtime:
+        try:
+            from PIL import Image
+            out.parent.mkdir(parents=True, exist_ok=True)
+            im = Image.open(src).convert("RGBA")
+            im.thumbnail((160, 160))
+            im.save(out, "PNG")
+        except Exception:
+            return None
+    return out.read_bytes()
+
+
 def group_folders():
     """GearQuestForever_DRUID belongs to GearQuestForever: {parent: [folders]}"""
     names = sorted(p.name for p in addons_dir().iterdir() if p.is_dir())
@@ -102,13 +157,24 @@ def sync():
     """Bring state in line with what is on disk; adopt known sources."""
     with LOCK:
         st, groups = load(), group_folders()
+        for key in [k for k in st["addons"] if k.startswith("local:")]:       # link entries recorded before the source was known
+            target = SEED.get(key[6:])
+            if target:
+                old = st["addons"].pop(key)
+                if target in st["addons"]:
+                    st["addons"][target]["folders"] = sorted(set(st["addons"][target]["folders"]) | set(old["folders"]))
+                else:
+                    st["addons"][target] = old
         owned = {f for a in st["addons"].values() for f in a["folders"]}
         for parent, folders in groups.items():
             if parent in owned:
                 continue
             t = toc(parent)
             key = SEED.get(parent) or (t.get("x-curse-project-id") and "cf:" + t["x-curse-project-id"]) or "local:" + parent
-            st["addons"][key] = {"name": t.get("title") or parent, "folders": folders, "version": t.get("version", "")}
+            if key in st["addons"]:                                             # second folder of one project
+                st["addons"][key]["folders"] = sorted(set(st["addons"][key]["folders"]) | set(folders))
+            else:
+                st["addons"][key] = {"name": t.get("title") or parent, "folders": folders, "version": t.get("version", "")}
         for key, a in list(st["addons"].items()):
             a["folders"] = [f for f in a["folders"] if (addons_dir() / f).is_dir()]
             if not a["folders"]:
@@ -131,7 +197,7 @@ def cf(path):
         return http("https://api.curseforge.com/v1" + path, {"x-api-key": cf_key(), "Accept": "application/json"})["data"]
     except urllib.error.HTTPError as e:
         if e.code == 403:
-            raise RuntimeError("CurseForge did not accept the saved key. Copy it again from console.curseforge.com and save it in Settings") from None
+            raise RuntimeError("CurseForge has not approved your key yet. Until it does, download the addon file from CurseForge and drop it on this window") from None
         raise
 
 
@@ -491,13 +557,14 @@ def check():
 
 def view(st=None):
     st = st or sync()
-    rows = [{"key": k, "source": {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "Unlinked"}[k.split(":")[0]],
+    rows = [{"key": k, "source": {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "No source"}[k.split(":")[0]],
              "size": folder_size(a["folders"]), "notes": toc(a["folders"][0]).get("notes", ""),
+             "category": a.get("category") or guess_category(toc(a["folders"][0]), a["name"]), "icon": bool(icon_png(k)),
              "can_rollback": any((BACKUPS / re.sub(r"[^\w.-]", "_", k)).glob("*")), **a} for k, a in st["addons"].items()]
     rows.sort(key=lambda r: r["name"].lower())
     fresh = [d for d in downloads() if time.time() - d["when"] < 1800]
     return {"addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
-            "new_downloads": fresh}
+            "new_downloads": fresh, "categories": CATEGORIES}
 
 
 # ---------- window ----------
@@ -540,6 +607,14 @@ class H(BaseHTTPRequestHandler):
             elif route == "upload":
                 name = install_upload(body["name"], body["data"])
                 r = {**view(), "installed": name}
+            elif route == "category":
+                if body["category"] not in CATEGORIES:
+                    raise RuntimeError("Unknown category")
+                with LOCK:
+                    st = load()
+                    st["addons"][body["key"]]["category"] = body["category"]
+                    save(st)
+                r = view()
             elif route == "ping":
                 r = {}
             elif route == "key":
@@ -570,6 +645,13 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/"):
             return self.handle_api({})
+        u = urllib.parse.urlparse(self.path)
+        if u.path == "/icon":                                   # <img> cannot send headers, so the token rides in the query
+            q = urllib.parse.parse_qs(u.query)
+            if q.get("t", [""])[0] != H.token or self.headers.get("Host", "").split(":")[0] != "127.0.0.1":
+                return self.send(b"", 403, "text/plain")
+            png = icon_png(q.get("key", [""])[0])
+            return self.send(png, ctype="image/png") if png else self.send(b"", 404, "text/plain")
         if self.path.split("?")[0] == "/":
             page = (HERE / "index.html").read_text().replace("__TOKEN__", H.token)
             return self.send(page.encode(), ctype="text/html; charset=utf-8")
@@ -620,6 +702,9 @@ def selftest():
             pass
     assert bbcode('[b]Hi[/b] <x>\n[url="https://a.b/c"]go[/url][size=3]z[/size]') == '<b>Hi</b> &lt;x&gt;<br><a href="https://a.b/c">go</a>z'
     assert epoch("1970-01-02T00:00:00Z") == 86400
+    assert guess_category({"category": "Quests"}, "Attune") == "Quests & Leveling"
+    assert guess_category({"notes": "Auction house helper"}, "X") == "Auctions & Economy"
+    assert guess_category({}, "Zzz") == "Other"
     print("selftest ok")
 
 
