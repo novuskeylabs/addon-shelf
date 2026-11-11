@@ -135,6 +135,7 @@ dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
 #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,90px);display:flex;gap:10px;align-items:center;background:var(--toast-bg);color:var(--toast-text);border:1px solid var(--brass);padding:10px 20px;border-radius:10px;transition:transform .3s;max-width:80vw;z-index:99;box-shadow:0 10px 30px #000a}
 #toast svg{font-size:18px;color:var(--ok-dot)}#toast.bad svg{color:var(--ember)}#toast.on{transform:translate(-50%,0)}#toast.bad{border-color:var(--ember);color:var(--danger-ink)}
 @media (max-width:1180px){#status{display:none}}
+@media (max-width:1700px){aside{position:absolute;right:0;top:0;bottom:0;z-index:5}}
 @media (max-width:860px){aside.on{position:absolute;inset:0;width:100%;z-index:5}aside>div{width:100%}h1 span{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-property:opacity,color,background-color,border-color,box-shadow!important}}
 body.locked [data-i],body.locked [data-u],body.locked [data-up],body.locked [data-a=install],body.locked [data-a=remove],body.locked [data-a=rollback],body.locked [data-d=install],body.locked [data-d=remove]{filter:grayscale(.8);opacity:.5;pointer-events:none}
@@ -176,10 +177,10 @@ const THEMES=[
  {id:"frost",name:"Frost and silver",dark:1,bg:"#141c26",bg2:"#0c1219",top:"#1e2a38",ca:"#243242",cb:"#1b2634",text:"#e8f0f7",text2:"#9fb0c2",on:"#eef4fa",on2:"#a8b8c9",line:"#34465a",acc:"#6fb9e8",acc2:"#b4defa",hot:"#ffb454"},
  {id:"violet",name:"Royal violet and gold",dark:1,bg:"#1a1331",bg2:"#100b20",top:"#2a1d4d",ca:"#2f2255",cb:"#231940",text:"#efeafb",text2:"#aea3cc",on:"#f2edfc",on2:"#b6abd3",line:"#44356f",acc:"#dfb04c",acc2:"#f7d98a",hot:"#ff7fa0"},
  {id:"forest",name:"Forest and copper",dark:1,bg:"#11211b",bg2:"#0a1510",top:"#1b3328",ca:"#213a2f",cb:"#182c23",text:"#e9f3ec",text2:"#9fb8a9",on:"#eef6f0",on2:"#a7bfb0",line:"#30503f",acc:"#d58a4f",acc2:"#f2b582",hot:"#f2c14e"},
- {id:"crimson",name:"Crimson and steel",dark:1,bg:"#1a1215",bg2:"#100a0c",top:"#2d1a1f",ca:"#30232a",cb:"#251a20",text:"#f4ebee",text2:"#b9a5ac",on:"#f7eef1",on2:"#bfabb2",line:"#47323a",acc:"#d9495a",acc2:"#ff8f9b",hot:"#ffc46b"},
+ {id:"crimson",name:"Crimson and steel",dark:1,bg:"#1a1215",bg2:"#100a0c",top:"#2d1a1f",ca:"#30232a",cb:"#251a20",text:"#f4ebee",text2:"#b9a5ac",on:"#f7eef1",on2:"#bfabb2",line:"#47323a",acc:"#e4687a",acc2:"#ffa3ad",hot:"#ffc46b"},
  {id:"dusk",name:"Dusk rose",dark:1,bg:"#221a25",bg2:"#151017",top:"#33263a",ca:"#382b40",cb:"#2b2031",text:"#f5ecf2",text2:"#bca9b9",on:"#f7eff4",on2:"#c2afbe",line:"#4e3c56",acc:"#e39a86",acc2:"#ffc7b6",hot:"#ffd27a"},
  {id:"parchment",name:"Parchment and burgundy",dark:0,bg:"#efe6d2",bg2:"#e4d8be",top:"#e6dabf",ca:"#fffaf0",cb:"#f6ecd6",text:"#2a1f17",text2:"#6d5c4a",on:"#2a1f17",on2:"#6d5c4a",line:"#d3c4a3",acc:"#8a2f2f",acc2:"#a84444",hot:"#c2571a"},
- {id:"stone",name:"Stone and teal",dark:0,bg:"#e9ecef",bg2:"#dde2e7",top:"#dfe4e9",ca:"#ffffff",cb:"#f4f6f8",text:"#1c2430",text2:"#5b6776",on:"#1c2430",on2:"#5b6776",line:"#cfd6dd",acc:"#0f7c86",acc2:"#1697a3",hot:"#c9541a"}];
+ {id:"stone",name:"Stone and teal",dark:0,bg:"#e9ecef",bg2:"#dde2e7",top:"#dfe4e9",ca:"#ffffff",cb:"#f4f6f8",text:"#1c2430",text2:"#5b6776",on:"#1c2430",on2:"#5b6776",line:"#cfd6dd",acc:"#0f7c86",acc2:"#0b6770",hot:"#c9541a"}];
 const mixc=(a,b,t)=>"#"+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-t)+parseInt(b.slice(i,i+2),16)*t).toString(16).padStart(2,"0")).join("");
 const lum=h=>[1,3,5].reduce((s,i,n)=>s+parseInt(h.slice(i,i+2),16)*[.299,.587,.114][n],0);
 function themeVars(t){const darkBg=t.dark||t.onDarkBg,k="#000000",w="#ffffff";return {
@@ -187,10 +188,10 @@ function themeVars(t){const darkBg=t.dark||t.onDarkBg,k="#000000",w="#ffffff";re
  "--text":t.text,"--text-hi":darkBg?mixc(t.text,w,.6):mixc(t.text,k,.3),"--text2":t.text2,
  "--surf":t.cb,"--card-a":t.ca,"--card-b":t.cb,"--card-hi":t.dark?"#ffffff1a":"#ffffffcc","--surf-head":mixc(t.cb,k,t.dark?.25:.07),"--surf-hover":mixc(t.ca,t.dark?w:k,t.dark?.08:.03),"--surf-line":t.line,"--on":t.on,"--on2":t.on2,
  "--brass":t.acc,"--brass2":t.acc2,"--btn-a":t.acc2,"--btn-b":t.acc,"--btn-line":mixc(t.acc,k,.4),"--btn-ink":lum(t.acc2)>150?"#1b1304":"#ffffff",
- "--ember":t.hot,"--hot-on":t.dark?mixc(t.hot,w,.2):mixc(t.hot,k,.25),"--ok":t.dark?"#6ad394":"#2f6a3a","--ok-dot":"#6ad394","--ok-bg":t.dark?"#1d6a41":"#2f6a3a","--warn":t.dark?"#ff9d82":"#8a2f18",
+ "--ember":t.hot,"--hot-on":t.dark?mixc(t.hot,w,.2):mixc(t.hot,k,.42),"--ok":t.dark?"#6ad394":"#2f6a3a","--ok-dot":"#6ad394","--ok-bg":t.dark?"#1d6a41":"#2f6a3a","--warn":t.dark?"#ff9d82":"#8a2f18",
  "--danger-a":"#d6563a","--danger-b":"#a8371f","--danger-line":"#6e2010","--danger-ink":"#fff0ea",
  "--field":darkBg?mixc(t.bg2,k,.3):w,"--ph":t.dark?mixc(t.cb,k,.3):mixc(t.cb,k,.12),
- "--src-cf":t.dark?"#ff9166":"#b5482a","--src-gh":t.dark?"#8db6ff":"#2c4a6e","--src-wowi":t.dark?"#63d2b4":"#1f5a4f",
+ "--src-cf":t.dark?"#ff9166":"#96371c","--src-gh":t.dark?"#8db6ff":"#2c4a6e","--src-wowi":t.dark?"#63d2b4":"#1f5a4f",
  "--toast-bg":darkBg?mixc(t.bg2,k,.3):"#20242c","--toast-text":darkBg?t.text:"#f2f4f8"}}
 function applyTheme(id){const t=THEMES.find(x=>x.id==id)||THEMES[0];for(const [k,v] of Object.entries(themeVars(t)))document.documentElement.style.setProperty(k,v);return t.id}
 let THEME=applyTheme(localStorage.theme);
@@ -212,7 +213,7 @@ let THEME=applyTheme(localStorage.theme);
  <div class="chips" id="srcs"></div><div id="catnote"></div><div id="results"></div></section>
 <section id="set"><h2>Settings</h2>
  <p>Most WoW Forever addons are published on CurseForge. It only lets tools like this search and download with a free personal key.</p>
- <ol><li>Open <a href="https://console.curseforge.com/" target="_blank" rel="noopener">console.curseforge.com</a> and sign in.</li><li>Open “API keys” in the left menu and copy the key shown there.</li><li>Paste it below and save. It stays on this computer.</li></ol>
+ <ol><li>Open <a href="https://console.curseforge.com/" target="_blank" rel="noopener">console.curseforge.com</a> and sign in.</li><li>Open “API keys” in the left menu and copy the key shown there.</li><li>Paste it below and save. It stays on this computer.</li><li>If CurseForge refuses the key, it has not approved it for addon tools yet: apply with the <a href="https://forms.monday.com/forms/dce5ccb7afda9a1c21dab1a1aa1d84eb?r=use1" target="_blank" rel="noopener">CurseForge API application form</a> and wait for their email.</li></ol>
  <div class="bar"><input class="field grow" id="key" type="password" placeholder="Paste the CurseForge key" aria-label="CurseForge key"><button class="btn" id="savekey">Save key</button></div>
  <p id="keystate"></p>
  <h2 style="margin-top:34px">Install from a file you downloaded</h2>
@@ -229,7 +230,7 @@ const seen=new Set(JSON.parse(sessionStorage.seen||"[]")),markSeen=p=>{seen.add(
 let S={addons:[]},sel=null,view=localStorage.view=="list"?"list":"tiles",R=[],srcOn="All",shots=[],si=0;
 const ICON={check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>',left:'<path d="M15 5l-7 7 7 7"/>',right:'<path d="M9 5l7 7-7 7"/>',alert:'<path d="M12 7v6M12 17h.01"/>'},ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
 let busy=0,checked=0;const prog=d=>{busy+=d;$("#prog").classList.toggle("on",busy>0)};
-async function api(p,body){if(p!="ping")prog(1);try{return await api0(p,body)}finally{if(p!="ping")prog(-1)}}
+async function api(p,body){prog(1);try{return await api0(p,body)}finally{prog(-1)}}
 async function api0(p,body){const r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw Object.assign(new Error(j.error||"Something went wrong"),{browser:j.browser});return j}
 // Authors who only allow downloads on CurseForge: show its download page in the app; the file it delivers is installed.
 async function viaBrowser(b,name){const t=tileOf(b.key);t&&t.classList.add("busy");toast(`${name} is only offered on CurseForge. Its download page is opening…`);
@@ -417,6 +418,5 @@ function themes(){$("#theme").innerHTML=THEMES.map(t=>`<button class="swo" data-
  <span class="swn">${esc(t.name)}${t.id==THEME?"<small>In use</small>":""}</span></button>`).join("")}
 themes();
 $("#theme").onclick=e=>{const b=e.target.closest("[data-theme-pick]");if(b){THEME=localStorage.theme=applyTheme(b.dataset.themePick);themes();if($("#dlg").open)fill("html")}};
-setInterval(()=>api("ping").catch(()=>{}),30000);
 api("state").then(s=>{S=s;api("check").then(n=>{S=n;checked=Date.now();draw()}).catch(()=>{});const h=decodeURIComponent(location.hash.slice(1));show(h=="cat"?"cat":"lib");draw(true);if(h.startsWith("info="))info(h.slice(5));else if(h&&h!="cat")openPage(h)}).catch(e=>toast(e.message,1));
 </script></body></html>

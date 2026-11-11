@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Addon manager for the WoW Forever client. The logic is stdlib only; the window is PySide6 (Qt WebEngine).
 Run `wowaddons` for the application, `wowaddons --selftest` for the built-in checks."""
-import json, os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile, secrets
+import calendar, json, os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile, secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -72,6 +72,23 @@ def http(url, headers=None, raw=False, body=None):
     if len(data) > MAX_ZIP:
         raise RuntimeError("Download is unexpectedly large")
     return data if raw else json.loads(data)
+
+
+def download(url, path):
+    """Stream a file to disk (addons can be hundreds of MB) and refuse anything over the cap."""
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    size = 0
+    with urllib.request.urlopen(req, timeout=60) as r, open(path, "wb") as out:
+        while chunk := r.read(1 << 20):
+            size += len(chunk)
+            if size > MAX_ZIP:
+                raise RuntimeError("Download is unexpectedly large")
+            out.write(chunk)
+
+
+def primary(a):
+    """The folder that names the addon (Bagnon, not BagBrother or Bagnon_Bank)."""
+    return min(a["folders"], key=len)
 
 
 def norm(s):
@@ -163,7 +180,7 @@ def icon_png(key):
         return None
     out = CACHE / "icons" / (re.sub(r"[^\w.-]", "_", key) + ".png")
     src = None
-    ref = toc(a["folders"][0]).get("icontexture", "").split("[")[0].strip().replace("\\", "/")
+    ref = toc(primary(a)).get("icontexture", "").split("[")[0].strip().replace("\\", "/")
     m = re.match(r"interface/addons/(.+)", ref, re.I)
     if m:
         base = addons_dir()
@@ -217,13 +234,13 @@ RELATED = [("move or resize the default interface", "replace the action bars", "
 
 def jobs_of(a):
     def find():
-        t = toc(min(a["folders"], key=len))
+        t = toc(primary(a))
         names = " ".join([a["name"], t.get("title", ""), *a["folders"]]).lower()
         notes = t.get("notes", "").lower()
         deps = " ".join(t.get(k, "") for k in ("dependencies", "requireddeps", "optionaldeps", "loadwith")).lower()
         return ({label for label, pn, pd in JOBS if re.search(pn, names) or (pd and re.search(pd, notes))},
                 {d.strip() for d in deps.split(",") if d.strip()})
-    return memo("jobs", min(a["folders"], key=len), find)
+    return memo("jobs", primary(a), find)
 
 
 def conflicts(addons):
@@ -243,9 +260,12 @@ def conflicts(addons):
 
 def shelf_categories():
     """Category names for the installed view: CurseForge's own when it is connected, otherwise the built-in guesses."""
+    if not cf_key() or _MEMO.get("cats_down", 0) > time.time():
+        return CATEGORIES
     try:
-        return [c["name"] for c in categories() if c["id"] != "wowi"] + ["Other"] if cf_key() else CATEGORIES
+        return [c["name"] for c in categories() if c["id"] != "wowi"] + ["Other"]
     except Exception:
+        _MEMO["cats_down"] = time.time() + 120          # offline or refused: use the built-in names for two minutes
         return CATEGORIES
 
 
@@ -263,6 +283,7 @@ def sync():
     """Bring state in line with what is on disk; adopt known sources."""
     with LOCK:
         st, groups = load(), group_folders()
+        before = json.dumps(st, sort_keys=True)
         for key in [k for k in st["addons"] if k.startswith("local:")]:       # link entries recorded before the source was known
             pid = toc(key[6:]).get("x-curse-project-id", "") if (addons_dir() / key[6:]).is_dir() else ""
             target = SEED.get(key[6:]) or (pid.isdigit() and "cf:" + pid)
@@ -287,11 +308,12 @@ def sync():
                 a.pop(stale, None)
             a["folders"] = [f for f in a["folders"] if (addons_dir() / f).is_dir()]
             if a["folders"]:                                                    # names and versions follow the files on disk
-                t = toc(min(a["folders"], key=len))
+                t = toc(primary(a))
                 a["name"], a["version"] = t.get("title") or a["name"], t.get("version") or a.get("version", "")
             if not a["folders"]:
                 del st["addons"][key]
-        save(st)
+        if json.dumps(st, sort_keys=True) != before:
+            save(st)
         return st
 
 
@@ -311,7 +333,7 @@ def cf(path, body=None, full=False):
         return r if full else r["data"]
     except urllib.error.HTTPError as e:
         if e.code == 403:
-            raise RuntimeError("CurseForge has not approved your key yet. Until it does, download the addon file from CurseForge and drop it on this window") from None
+            raise RuntimeError("CurseForge refused the saved key (mistyped, or not approved yet). Check it in Settings") from None
         raise
 
 
@@ -353,12 +375,8 @@ def latest(key):
     if src == "cf":
         if not cf_key():
             raise RuntimeError("Add a CurseForge key in Settings to check this addon")
-        files = cf(f"/mods/{ref}/files?gameVersionTypeId={CF_FOREVER}&pageSize=1")
-        if not files:
-            raise RuntimeError("No Forever version published")
-        f, mod = files[0], cf(f"/mods/{ref}")
-        return {"version": f["displayName"], "id": str(f["id"]), "url": f.get("downloadUrl"),
-                "page": mod["links"]["websiteUrl"], "name": mod["name"]}
+        new = cf_newest(cf(f"/mods/{ref}"))             # the same choice the update check makes
+        return {**new, "url": cf(f"/mods/{ref}/files/{new['id']}").get("downloadUrl")}
     if src == "gh":
         rel = gh(f"repos/{ref}/releases/latest")
         zips = [a for a in rel.get("assets", []) if a["name"].lower().endswith(".zip")]
@@ -373,22 +391,34 @@ def latest(key):
     raise RuntimeError("This addon has no known source yet. Find it in the catalog to link it.")
 
 
+def cf_pick(mod):
+    """The project's newest Forever file: a full release when there is one, otherwise the newest beta or alpha."""
+    idx = [f for f in mod.get("latestFilesIndexes") or [] if f.get("gameVersionTypeId") == CF_FOREVER]
+    return max([f for f in idx if f.get("releaseType") == 1] or idx, key=lambda f: f["fileId"], default=None)
+
+
 def cf_newest(mod):
     """Newest Forever file of a project from the data a search or batch lookup already carries."""
-    idx = [f for f in mod.get("latestFilesIndexes") or [] if f.get("gameVersionTypeId") == CF_FOREVER]
-    if not idx:
+    f = cf_pick(mod)
+    if not f:
         raise RuntimeError("No Forever version published")
-    f = max(idx, key=lambda f: f["fileId"])
     return {"version": re.sub(r"\.zip$", "", f["filename"]), "id": str(f["fileId"]), "page": mod["links"]["websiteUrl"],
             "name": mod["name"], "restricted": mod.get("allowModDistribution") is False, "category": cf_category(mod),
-            "thumb": (mod.get("logo") or {}).get("thumbnailUrl", "")}
+            "thumb": (mod.get("logo") or {}).get("thumbnailUrl", ""), "released": epoch(mod.get("dateReleased"))}
 
 
 def is_current(a, new):
     if a.get("remote_id"):
+        if a["remote_id"].isdigit() and new["id"].isdigit():        # file numbers only go up: never offer an older file
+            return int(a["remote_id"]) >= int(new["id"])
         return a["remote_id"] == new["id"]
     v = norm(a.get("version"))            # adopted addon: compare the .toc version with the file name
-    return bool(v) and v in norm(new["version"])
+    if v and v in norm(new["version"]):
+        return True
+    # one zip can serve several game versions under another version number: files put on disk after the
+    # project's last release cannot be older than it
+    put = (stamp(primary(a)) or (0, 0))[1] / 1e9 if a.get("folders") else 0
+    return bool(new.get("released")) and put > new["released"]
 
 
 def wowi_cats():
@@ -401,7 +431,7 @@ def wowi_cats():
 
 def epoch(iso):
     try:
-        return int(time.mktime(time.strptime(iso[:19], "%Y-%m-%dT%H:%M:%S")) - time.timezone)
+        return calendar.timegm(time.strptime(iso[:19], "%Y-%m-%dT%H:%M:%S"))
     except (TypeError, ValueError):
         return 0
 
@@ -424,7 +454,7 @@ def cf_category(m):
 
 def row_cf(m):
     cat = cf_category(m)
-    ver = next((f.get("filename", "") for f in m.get("latestFilesIndexes") or [] if f.get("gameVersionTypeId") == CF_FOREVER), "")
+    ver = (cf_pick(m) or {}).get("filename", "")
     return {"key": f"cf:{m['id']}", "source": "CurseForge", "name": m["name"], "summary": m.get("summary", ""),
             "author": ", ".join(a["name"] for a in m.get("authors", [])[:2]), "downloads": int(m.get("downloadCount") or 0),
             "thumb": (m.get("logo") or {}).get("thumbnailUrl", ""), "page": m["links"]["websiteUrl"], "category": cat,
@@ -465,11 +495,13 @@ def details(key):
     if src == "cf":
         if not cf_key():
             raise RuntimeError("Add a CurseForge key in Settings to see this addon")
-        r = row_cf(cf(f"/mods/{ref}"))
+        mod = cf(f"/mods/{ref}")
+        r = row_cf(mod)
         r["html"] = cf(f"/mods/{ref}/description")
     elif src == "wowi":
         r = row_wowi(next(a for a in wowi_list() if a["UID"] == ref))
-        r["html"] = bbcode(http(f"https://api.mmoui.com/v3/game/WOW/filedetails/{ref}.json")[0].get("UIDescription"))
+        wd = http(f"https://api.mmoui.com/v3/game/WOW/filedetails/{ref}.json")[0]
+        r["html"] = bbcode(wd.get("UIDescription"))
     else:
         r = row_gh(gh("repos/" + ref))
         try:
@@ -483,10 +515,10 @@ def details(key):
     r["changelog"] = ""
     try:
         if src == "cf":
-            f = cf(f"/mods/{ref}/files?gameVersionTypeId={CF_FOREVER}&pageSize=1")
-            r["changelog"] = cf(f"/mods/{ref}/files/{f[0]['id']}/changelog") if f else ""
+            f = cf_pick(mod)
+            r["changelog"] = cf(f"/mods/{ref}/files/{f['fileId']}/changelog") if f else ""
         elif src == "wowi":
-            r["changelog"] = bbcode(http(f"https://api.mmoui.com/v3/game/WOW/filedetails/{ref}.json")[0].get("UIChangeLog"))
+            r["changelog"] = bbcode(wd.get("UIChangeLog"))
         elif shutil.which("gh"):
             out = subprocess.run(["gh", "api", "-H", "Accept: application/vnd.github.html+json", f"repos/{ref}/releases/latest",
                                   "-q", ".body_html"], capture_output=True, text=True, timeout=40)
@@ -600,15 +632,41 @@ def unpack_forever(zpath, dest):
     return found
 
 
+def saved_versions(key):
+    """Backup slots of an addon that actually hold something, oldest first."""
+    return [d for d in sorted((BACKUPS / re.sub(r"[^\w.-]", "_", key)).glob("*")) if d.is_dir() and any(d.iterdir())]
+
+
 def backup(key, folders):
-    slot = BACKUPS / re.sub(r"[^\w.-]", "_", key) / time.strftime("%Y%m%d-%H%M%S")
+    """Move the given addon folders out of the game into a dated slot. Returns the slot, or None if there was nothing to keep."""
+    home = BACKUPS / re.sub(r"[^\w.-]", "_", key)
+    slot = home / (time.strftime("%Y%m%d-%H%M%S") + f"-{time.time_ns() % 1000:03d}")
     slot.mkdir(parents=True)
     for f in folders:
         if (addons_dir() / f).exists():
             shutil.move(addons_dir() / f, slot / f)
-    old = sorted(slot.parent.iterdir())[:-2]            # keep the two newest
-    [shutil.rmtree(o) for o in old]
-    return slot
+    for d in sorted(home.iterdir()):                    # tidy: empty slots go, and only the two newest are kept
+        if d.is_dir() and not any(d.iterdir()):
+            d.rmdir()
+    for d in saved_versions(key)[:-2]:
+        shutil.rmtree(d)
+    return slot if slot.exists() else None
+
+
+def swap_in(key, found, replace):
+    """Replace `replace` (kept as a backup) with the unpacked folders `found`. If anything fails, the old folders go back."""
+    slot = backup(key, replace)
+    try:
+        for d in found:
+            shutil.move(d, addons_dir() / d.name)
+    except Exception:
+        for d in found:
+            shutil.rmtree(addons_dir() / d.name, ignore_errors=True)
+        if slot:
+            for old in list(slot.iterdir()):
+                shutil.move(old, addons_dir() / old.name)
+            slot.rmdir()
+        raise
 
 
 def install(key):
@@ -620,8 +678,7 @@ def install(key):
     CACHE.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=CACHE) as tmp:
         zpath = Path(tmp) / "a.zip"
-        data = http(new["url"], raw=True)
-        zpath.write_bytes(data)
+        download(new["url"], zpath)
         found = unpack_forever(zpath, Path(tmp) / "x")
         names = [d.name for d in found]
         with LOCK:
@@ -630,12 +687,10 @@ def install(key):
             clash = [k for k, a in st["addons"].items() if k != key and set(a["folders"]) & set(names)]
             prev = st["addons"].get(key, {}).get("folders", [])
             prev_cat = st["addons"].get(key, {}).get("category")
-            backup(key, sorted(set(prev) | set(names) | {f for k in clash for f in st["addons"][k]["folders"]}))
+            swap_in(key, found, sorted(set(prev) | set(names) | {f for k in clash for f in st["addons"][k]["folders"]}))
             for k in clash:
                 del st["addons"][k]
-            for d in found:
-                shutil.move(d, addons_dir() / d.name)
-            t = toc(names[0])
+            t = toc(min(names, key=len))
             st["addons"][key] = {"name": t.get("title") or new["name"], "folders": sorted(names),
                                  "version": t.get("version") or new["version"], "remote_id": new["id"],
                                  **({"category": prev_cat} if prev_cat else {})}
@@ -685,12 +740,10 @@ def install_zip(z, source=None):
             st = load()
             owners = [k for k, a in st["addons"].items() if set(a["folders"]) & set(names)]
             key = source or (owners[0] if owners else "local:" + min(names, key=len))
-            backup(key, sorted(set(names) | {f for k in owners for f in st["addons"][k]["folders"]}))
+            swap_in(key, found, sorted(set(names) | {f for k in owners for f in st["addons"][k]["folders"]}))
             old = st["addons"].get(key, {})
             for k in owners:
                 del st["addons"][k]
-            for d in found:
-                shutil.move(d, addons_dir() / d.name)
             t = toc(min(names, key=len))
             st["addons"][key] = {**old, "name": t.get("title") or names[0], "folders": names, "version": t.get("version", "")}
             st["addons"][key].pop("remote_id", None)
@@ -712,20 +765,20 @@ def remove(key):
 def rollback(key):
     if wow_running():
         raise RuntimeError("Close World of Warcraft first")
-    slots = sorted((BACKUPS / re.sub(r"[^\w.-]", "_", key)).glob("*"))
+    slots = saved_versions(key)
     if not slots:
         raise RuntimeError("No earlier version is saved for this addon")
     with LOCK:
         st, slot = load(), slots[-1]
-        names = [d.name for d in slot.iterdir()]
+        names = sorted(d.name for d in slot.iterdir())
         for f in set(names) | set(st["addons"].get(key, {}).get("folders", [])):
             shutil.rmtree(addons_dir() / f, ignore_errors=True)
         for d in list(slot.iterdir()):
             shutil.move(d, addons_dir() / d.name)
         slot.rmdir()
-        t = toc(names[0])
-        st["addons"][key] = {"name": t.get("title") or names[0], "folders": sorted(names), "version": t.get("version", ""),
-                             **({"category": st["addons"][key]["category"]} if st["addons"].get(key, {}).get("category") else {})}
+        t = toc(min(names, key=len))
+        keep = {"category": st["addons"][key]["category"]} if st["addons"].get(key, {}).get("category") else {}
+        st["addons"][key] = {"name": t.get("title") or names[0], "folders": names, "version": t.get("version", ""), **keep}
         save(st)
     LIVE.pop(key, None)
 
@@ -778,9 +831,10 @@ def view(st=None):
     st = st or sync()
     names = shelf_categories()
     rows = [{"key": k, "source": {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "No source"}[k.split(":")[0]],
-             "size": folder_size(a["folders"]), "notes": toc(a["folders"][0]).get("notes", ""),
-             "category": a.get("category") or SRC_CAT.get(k) or guess_category(toc(a["folders"][0]), a["name"]), "icon": memo("icon", a["folders"][0], lambda k=k: bool(icon_png(k))), "art": SRC_ART.get(k, ""),
-             "can_rollback": any((BACKUPS / re.sub(r"[^\w.-]", "_", k)).glob("*")), **a, **LIVE.get(k, {})}
+             "size": folder_size(a["folders"]), "notes": toc(primary(a)).get("notes", ""),
+             "category": a.get("category") or SRC_CAT.get(k) or guess_category(toc(primary(a)), a["name"]),
+             "icon": memo("icon", primary(a), lambda k=k: bool(icon_png(k))), "art": SRC_ART.get(k, ""),
+             "can_rollback": bool(saved_versions(k)), **a, **LIVE.get(k, {})}
             for k, a in st["addons"].items()]
     rows.sort(key=lambda r: r["name"].lower())
     fresh = [d for d in downloads() if time.time() - d["when"] < 1800 and d["size"] > 0
@@ -793,25 +847,26 @@ def view(st=None):
 
 # ---------- window ----------
 class H(BaseHTTPRequestHandler):
-    token, last = "", time.time()
+    token = ""
 
     def log_message(self, *a):
         pass
 
-    def send(self, obj, code=200, ctype="application/json"):
+    def send(self, obj, code=200, ctype="application/json", cache=None):
         body = obj if isinstance(obj, bytes) else json.dumps(obj).encode()
         self.send_response(code)
         self.send_header("Content-Type", ctype)
+        if cache:
+            self.send_header("Cache-Control", cache)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
     def handle_api(self, body):
-        H.last = time.time()
         u = urllib.parse.urlparse(self.path)
         q = urllib.parse.parse_qs(u.query)
         # other websites in the browser must not be able to drive this server
-        if self.headers.get("Host", "").split(":")[0] != "127.0.0.1" or self.headers.get("X-Token") != H.token:
+        if self.headers.get("Host", "").split(":")[0] != "127.0.0.1" or not secrets.compare_digest(self.headers.get("X-Token", ""), H.token):
             return self.send({"error": "forbidden"}, 403)
         try:
             route = u.path.removeprefix("/api/")
@@ -843,8 +898,6 @@ class H(BaseHTTPRequestHandler):
                     st["addons"][body["key"]]["category"] = body["category"]
                     save(st)
                 r = view()
-            elif route == "ping":
-                r = {}
             elif route == "key":
                 if not body["key"].strip().isascii() or " " in body["key"].strip():
                     raise RuntimeError("That looks like the hidden (dotted) version of the key. Use the copy button next to it on console.curseforge.com, then paste again")
@@ -876,6 +929,8 @@ class H(BaseHTTPRequestHandler):
             self.send(r)
         except NeedsBrowser as e:
             self.send({"error": str(e), "browser": e.info}, 409)
+        except KeyError:
+            self.send({"error": "That addon is no longer on your shelf. Refresh and try again"}, 400)
         except Exception as e:
             self.send({"error": str(e)}, 400)
 
@@ -885,10 +940,10 @@ class H(BaseHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         if u.path == "/icon":                                   # <img> cannot send headers, so the token rides in the query
             q = urllib.parse.parse_qs(u.query)
-            if q.get("t", [""])[0] != H.token or self.headers.get("Host", "").split(":")[0] != "127.0.0.1":
+            if not secrets.compare_digest(q.get("t", [""])[0], H.token) or self.headers.get("Host", "").split(":")[0] != "127.0.0.1":
                 return self.send(b"", 403, "text/plain")
             png = icon_png(q.get("key", [""])[0])
-            return self.send(png, ctype="image/png") if png else self.send(b"", 404, "text/plain")
+            return self.send(png, ctype="image/png", cache="private, max-age=3600") if png else self.send(b"", 404, "text/plain")
         if self.path.split("?")[0] == "/":
             page = (HERE / "index.html").read_text().replace("__TOKEN__", H.token)
             return self.send(page.encode(), ctype="text/html; charset=utf-8")
@@ -943,9 +998,9 @@ def main():
         def __init__(self):
             super().__init__()
             self.box = QFrame(view)                             # a small panel in the corner of the app, not a window
-            self.box.setStyleSheet("QFrame{background:#1c120c;border:2px solid #c9a04f;border-radius:10px}"
-                                   "QLabel{color:#efe1c0;border:0;font-size:14px}"
-                                   "QPushButton{color:#efe1c0;border:1px solid #c9a04f;border-radius:6px;padding:2px 10px}")
+            self.box.setStyleSheet("QFrame{background:#14161c;border:1px solid #8a8f9c;border-radius:10px}"
+                                   "QLabel{color:#eceff5;border:0;font-size:14px}"
+                                   "QPushButton{color:#eceff5;border:1px solid #8a8f9c;border-radius:6px;padding:2px 10px}")
             self.title = QLabel("CurseForge")
             stop = QPushButton("Cancel", clicked=self.closed)
             bar = QHBoxLayout()
@@ -994,7 +1049,7 @@ def main():
             job = self.job
             (CACHE / "uploads").mkdir(parents=True, exist_ok=True)
             dl.setDownloadDirectory(str(CACHE / "uploads"))
-            dl.setDownloadFileName(re.sub(r"[^\\w.-]", "_", dl.downloadFileName()) or "addon.zip")
+            dl.setDownloadFileName(re.sub(r"[^\w.-]", "_", dl.downloadFileName()) or "addon.zip")
             dl.isFinishedChanged.connect(lambda: self.finish(dl, job))
             dl.accept()
 
@@ -1032,6 +1087,13 @@ def selftest():
     assert is_current({"version": "1.0.7 b"}, {"id": "x", "version": "DialogueUI-1.0.7-b.zip"})
     assert not is_current({"version": "1.4.0"}, {"id": "x", "version": "Lueur-1.7.0.zip"})
     assert not is_current({"remote_id": "1"}, {"id": "2", "version": ""})
+    assert is_current({"remote_id": "9"}, {"id": "2", "version": ""})          # a newer beta is not "out of date" against an older release
+    T = CF_FOREVER
+    assert cf_pick({"latestFilesIndexes": [{"fileId": 5, "releaseType": 2, "gameVersionTypeId": T},
+                                           {"fileId": 3, "releaseType": 1, "gameVersionTypeId": T},
+                                           {"fileId": 9, "releaseType": 1, "gameVersionTypeId": 1}]})["fileId"] == 3
+    assert cf_pick({"latestFilesIndexes": []}) is None
+    assert not is_current({"version": "1.0"}, {"id": "x", "version": "Foo-2.0", "released": 0})
     with tempfile.TemporaryDirectory() as t:
         t = Path(t)
         for name, members in {"plain": ["Foo/Foo.toc", "Foo_Opt/Foo_Opt.toc"], "wrapped": ["rel/Foo/Foo.toc"],
