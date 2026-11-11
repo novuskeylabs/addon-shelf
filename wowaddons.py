@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Addon manager for the WoW Forever client. The logic is stdlib only; the window is PySide6 (Qt WebEngine).
 Run `wowaddons` for the application, `wowaddons --selftest` for the built-in checks."""
-import calendar, json, os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile, secrets
+import calendar, fcntl, json, os, re, socket, zlib, shutil, subprocess, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile, secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -28,62 +28,134 @@ SRC_ART = {}        # key -> the source's logo address for that addon (session o
 SRC_CAT = {}        # key -> the source's own category for that addon (session only)
 LIVE = {}           # key -> {latest, latest_id, page, update, error, restricted}; never written to disk
 RESTART = None      # set by the application window: restarts the app (used after a new key is saved)
+NOTE = {}           # "net": why the last update check could not reach the sources
 FETCH = None        # set by the application window: FETCH(url) -> Path of the file CurseForge's download page delivered
 
 
 _DIR = None
 
 
+class GameMissing(RuntimeError):
+    """World of Warcraft: Forever (or its AddOns folder) cannot be found."""
+
+
 def addons_dir():
-    """Found once (the search walks ~/Games), then remembered in state.json."""
+    """The Forever client's AddOns folder. Found once (the search walks ~/Games), remembered in state.json, and
+    looked for again if it disappears (game moved, reinstalled or uninstalled)."""
     global _DIR
-    if _DIR is None:
-        st = load()
-        if not st.get("addons_dir") or not Path(st["addons_dir"]).is_dir():
-            r = subprocess.run(["find", str(HOME / "Games"), "-maxdepth", "8", "-type", "d", "-path", "*/_forever_/Interface/AddOns",
-                                "-print", "-quit"], capture_output=True, text=True)
-            if not r.stdout.strip():
-                raise SystemExit("Could not find _forever_/Interface/AddOns under ~/Games")
-            st["addons_dir"] = r.stdout.strip()
-            save(st)
+    if _DIR is not None and _DIR.is_dir():
+        return _DIR
+    _DIR = None
+    st = load()
+    if st.get("addons_dir") and Path(st["addons_dir"]).is_dir():
         _DIR = Path(st["addons_dir"])
+        return _DIR
+    r = subprocess.run(["find", str(HOME / "Games"), "-maxdepth", "7", "-type", "d", "-name", "_forever_", "-print", "-quit"],
+                       capture_output=True, text=True)
+    if not r.stdout.strip():
+        raise GameMissing("World of Warcraft: Forever was not found on this computer. Install it, or point the app at its "
+                          "Interface/AddOns folder in Settings")
+    found = Path(r.stdout.strip()) / "Interface" / "AddOns"
+    found.mkdir(parents=True, exist_ok=True)            # a fresh game install has no AddOns folder yet
+    st["addons_dir"] = str(found)
+    save(st)
+    _DIR = found
     return _DIR
 
 
+def set_addons_dir(path):
+    """Point the app at an AddOns folder chosen by the user."""
+    global _DIR
+    p = Path(path.strip()).expanduser()
+    if not p.is_dir() or p.name.lower() != "addons":
+        raise RuntimeError("That is not an AddOns folder. It should end in .../_forever_/Interface/AddOns")
+    with LOCK:
+        st = load()
+        st["addons_dir"] = str(p)
+        save(st)
+    _DIR = p
+    _MEMO.clear()
+
+
 def load():
-    try:
-        return json.loads(STATE.read_text())
-    except (OSError, ValueError):
-        return {"addons": {}}
+    for f in (STATE, STATE.with_suffix(".bak")):          # the previous good copy is kept beside it
+        try:
+            st = json.loads(f.read_text())
+            if isinstance(st, dict) and isinstance(st.get("addons"), dict):
+                return st
+        except (OSError, ValueError):
+            continue
+    return {"addons": {}}
 
 
 def save(st):
     CONF.mkdir(parents=True, exist_ok=True)
     tmp = STATE.with_suffix(".tmp")
     tmp.write_text(json.dumps(st, indent=1))
+    try:
+        json.loads(STATE.read_text())                     # only a readable file is worth keeping as the fallback
+        shutil.copy2(STATE, STATE.with_suffix(".bak"))
+    except (OSError, ValueError):
+        pass
     tmp.replace(STATE)
+
+
+SITES = {"api.curseforge.com": "CurseForge", "edge.forgecdn.net": "CurseForge", "mediafilez.forgecdn.net": "CurseForge",
+         "api.mmoui.com": "WoWInterface", "cdn.wowinterface.com": "WoWInterface", "api.github.com": "GitHub", "github.com": "GitHub"}
+
+
+class Unreachable(RuntimeError):
+    """No connection, or the source did not answer."""
+
+
+class Refused(RuntimeError):
+    """The source answered with an error."""
+    def __init__(self, code, site):
+        self.code = code
+        super().__init__({404: f"{site} no longer has that", 429: f"{site} is limiting requests. Try again in a minute"}.get(
+            code, f"{site} is having problems (error {code}). Try again later" if code >= 500 else f"{site} refused the request (error {code})"))
+
+
+def reach(req, timeout):
+    """urlopen with failures turned into messages a person can act on."""
+    site = SITES.get(urllib.parse.urlparse(req.full_url).hostname, urllib.parse.urlparse(req.full_url).hostname)
+    try:
+        return urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as e:
+        raise Refused(e.code, site) from None
+    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, OSError):
+        raise Unreachable(f"No internet connection, or {site} cannot be reached") from None
 
 
 def http(url, headers=None, raw=False, body=None):
     req = urllib.request.Request(url, headers={"User-Agent": UA, **(headers or {})},
                                  data=json.dumps(body).encode() if body is not None else None)
-    with urllib.request.urlopen(req, timeout=40) as r:
-        data = r.read(MAX_ZIP + 1)          # never buffer more than the cap
+    try:
+        with reach(req, 15) as r:
+            data = r.read(MAX_ZIP + 1)          # never buffer more than the cap
+    except (socket.timeout, TimeoutError, ConnectionError):
+        raise Unreachable("The connection dropped while reading the answer") from None
     if len(data) > MAX_ZIP:
         raise RuntimeError("Download is unexpectedly large")
-    return data if raw else json.loads(data)
+    try:
+        return data if raw else json.loads(data)
+    except ValueError:
+        raise RuntimeError("The source sent an answer that could not be read. Try again later") from None
 
 
 def download(url, path):
     """Stream a file to disk (addons can be hundreds of MB) and refuse anything over the cap."""
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     size = 0
-    with urllib.request.urlopen(req, timeout=60) as r, open(path, "wb") as out:
-        while chunk := r.read(1 << 20):
-            size += len(chunk)
-            if size > MAX_ZIP:
-                raise RuntimeError("Download is unexpectedly large")
-            out.write(chunk)
+    try:
+        with reach(req, 60) as r, open(path, "wb") as out:
+            while chunk := r.read(1 << 20):
+                size += len(chunk)
+                if size > MAX_ZIP:
+                    raise RuntimeError("Download is unexpectedly large")
+                out.write(chunk)
+    except (socket.timeout, TimeoutError, ConnectionError):
+        raise Unreachable("The connection dropped during the download. Nothing was changed; try again") from None
 
 
 def primary(a):
@@ -119,17 +191,37 @@ def toc(folder):
     return memo("toc", folder, lambda: read_toc(folder))
 
 
+def slurp(p):
+    """A .toc's text, or "" if it cannot be read (a folder, no permission, damaged)."""
+    try:
+        return p.read_text(encoding="utf-8-sig", errors="ignore") if p.is_file() else ""
+    except OSError:
+        return ""
+
+
+def damage(a):
+    """Why an installed addon looks broken, or "" if it looks fine."""
+    for f in a["folders"]:
+        d = addons_dir() / f
+        tocs = [t for t in d.glob("*.toc")] if d.is_dir() else []
+        if not tocs:
+            return f"The folder {f} has no description (.toc) file, so the game cannot load it"
+        if not any(re.search(r"(?mi)^##\s*Interface\s*:", slurp(t)) for t in tocs):
+            return f"The description (.toc) file in {f} is empty or unreadable, so the game cannot load it"
+    return ""
+
+
 def read_toc(folder):
     out = {}
     d = addons_dir() / folder
     def rank(p):                                    # the Forever-specific .toc describes this client best
         forever = bool(re.search(r"[_-]forever$", p.stem, re.I))
-        txt = p.read_text(encoding="utf-8-sig", errors="ignore")
+        txt = slurp(p)
         m = re.search(r"(?mi)^##\s*Interface\s*:\s*(.*)$", txt)
         return (not forever, not (m and re.search(r"\b160\d\d\b", m.group(1))), p.stem != folder, len(p.name))
     tocs = sorted(d.glob("*.toc"), key=rank)
     if tocs:
-        for line in tocs[0].read_text(encoding="utf-8-sig", errors="ignore").splitlines():
+        for line in slurp(tocs[0]).splitlines():
             m = re.match(r"##\s*([^:]+?)\s*:\s*(.*)", line)
             if m:
                 out.setdefault(m.group(1).lower(), re.sub(r"\s+", " ", re.sub(r"\|c[0-9a-fA-F]{8}|\|r|\|T[^|]*\|t", "", m.group(2)).replace("|n", " ")).strip())
@@ -141,7 +233,7 @@ def read_toc(folder):
 def forever_ok(path):
     """Does this addon folder declare support for the Forever client (interface 160xx, or a Forever .toc)?"""
     for t in Path(path).glob("*.toc"):
-        m = re.search(r"(?mi)^##\s*Interface\s*:\s*(.*)$", t.read_text(encoding="utf-8-sig", errors="ignore"))
+        m = re.search(r"(?mi)^##\s*Interface\s*:\s*(.*)$", slurp(t))
         if (m and re.search(r"\b160\d\d\b", m.group(1))) or re.search(r"[_-]forever\.toc$", t.name, re.I):
             return True
     return False
@@ -149,7 +241,14 @@ def forever_ok(path):
 
 def folder_size(names):
     def walk(n):
-        return sum(os.path.getsize(os.path.join(root, f)) for root, _, files in os.walk(addons_dir() / n) for f in files)
+        total = 0
+        for root, _, files in os.walk(addons_dir() / n):
+            for f in files:
+                try:
+                    total += os.path.getsize(os.path.join(root, f))
+                except OSError:
+                    pass                                # a dangling link or unreadable file
+        return total
     return sum(memo("size", n, lambda n=n: walk(n)) for n in names)
 
 
@@ -191,7 +290,11 @@ def icon_png(key):
         src = base if base.is_file() and base.resolve().is_relative_to(addons_dir().resolve()) else None
     if not src:
         return None
-    if not out.exists() or out.stat().st_mtime < src.stat().st_mtime:
+    try:
+        stale = not out.exists() or out.stat().st_mtime < src.stat().st_mtime
+    except OSError:
+        return None
+    if stale:
         try:
             from PIL import Image
             out.parent.mkdir(parents=True, exist_ok=True)
@@ -203,7 +306,10 @@ def icon_png(key):
             im.save(out, "PNG")
         except Exception:
             return None
-    return out.read_bytes()
+    try:
+        return out.read_bytes()
+    except OSError:
+        return None
 
 
 # Which part of the game an addon takes over. Two installed addons that take over the same part can fight each other.
@@ -331,7 +437,7 @@ def cf(path, body=None, full=False):
         r = http("https://api.curseforge.com/v1" + path, {"x-api-key": cf_key(), "Accept": "application/json",
                                                            "Content-Type": "application/json"}, body=body)
         return r if full else r["data"]
-    except urllib.error.HTTPError as e:
+    except Refused as e:
         if e.code == 403:
             raise RuntimeError("CurseForge refused the saved key (mistyped, or not approved yet). Check it in Settings") from None
         raise
@@ -339,9 +445,12 @@ def cf(path, body=None, full=False):
 
 def gh(path):
     if shutil.which("gh"):
-        r = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=40)
-        if r.returncode == 0:
-            return json.loads(r.stdout)
+        try:
+            r = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=20)
+            if r.returncode == 0:
+                return json.loads(r.stdout)
+        except (subprocess.TimeoutExpired, ValueError):
+            pass
     return http("https://api.github.com/" + path, {"Accept": "application/vnd.github+json"})
 
 
@@ -359,8 +468,14 @@ def memo_time(name, ttl, fn):
 def wowi_fetch():
     f = CACHE / "wowinterface.json"
     if not f.exists() or time.time() - f.stat().st_mtime > 6 * 3600:
-        CACHE.mkdir(parents=True, exist_ok=True)
-        f.write_bytes(http("https://api.mmoui.com/v3/game/WOW/filelist.json", raw=True))
+        try:
+            data = http("https://api.mmoui.com/v3/game/WOW/filelist.json", raw=True)
+            json.loads(data)
+            CACHE.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(data)
+        except RuntimeError:
+            if not f.exists():
+                raise                                   # offline with nothing saved
     return json.loads(f.read_text())
 
 
@@ -422,11 +537,19 @@ def is_current(a, new):
 
 
 def wowi_cats():
-    f = CACHE / "wowinterface-cats.json"
-    if not f.exists() or time.time() - f.stat().st_mtime > 7 * 86400:
-        CACHE.mkdir(parents=True, exist_ok=True)
-        f.write_bytes(http("https://api.mmoui.com/v3/game/WOW/categorylist.json", raw=True))
-    return {c["UICATID"]: c["UICATTitle"] for c in json.loads(f.read_text())}
+    def fetch():
+        f = CACHE / "wowinterface-cats.json"
+        if not f.exists() or time.time() - f.stat().st_mtime > 7 * 86400:
+            try:
+                data = http("https://api.mmoui.com/v3/game/WOW/categorylist.json", raw=True)
+                json.loads(data)
+                CACHE.mkdir(parents=True, exist_ok=True)
+                f.write_bytes(data)
+            except RuntimeError:
+                if not f.exists():
+                    return {}                           # names are a nicety: fall back to "Other"
+        return {c["UICATID"]: c["UICATTitle"] for c in json.loads(f.read_text())}
+    return memo_time("wowi_cats", 3600, fetch)
 
 
 def epoch(iso):
@@ -491,6 +614,10 @@ def bbcode(text):
 
 
 def details(key):
+    return memo_time(("details", key), 600, lambda: read_details(key))
+
+
+def read_details(key):
     src, ref = key.split(":", 1)
     if src == "cf":
         if not cf_key():
@@ -561,9 +688,13 @@ def browse(cat, index, size):
 def search(q):
     q, out, errors = q.strip(), [], []
 
+    down = []
+
     def run(name, fn):
         try:
             out.extend(fn())
+        except Unreachable:
+            down.append(name)
         except Exception as e:                      # one source failing must not hide the others
             errors.append(f"{name}: {e}")
 
@@ -587,6 +718,8 @@ def search(q):
     threads = [threading.Thread(target=run, args=a) for a in (("CurseForge", s_cf), ("WoWInterface", s_wowi), ("GitHub", s_gh))]
     [t.start() for t in threads]
     [t.join() for t in threads]
+    if down:
+        errors.append("No internet connection, or " + " and ".join(sorted(down)) + " cannot be reached")
     return {"results": out, "errors": errors}
 
 
@@ -600,15 +733,18 @@ class NeedsBrowser(Exception):
 
 def unpack(zpath, dest):
     """Extract into dest and return the addon folders (each has a .toc named after it)."""
-    with zipfile.ZipFile(zpath) as z:
-        root, members = dest.resolve(), z.infolist()
-        if len(members) > 200_000 or sum(m.file_size for m in members) > 2 * MAX_ZIP:
-            raise RuntimeError("Archive is unreasonably large when unpacked")
-        for m in members:
-            target = (dest / m.filename).resolve()
-            if not target.is_relative_to(root) or m.external_attr >> 28 == 0xA:
-                raise RuntimeError("Archive has an unsafe path: " + m.filename)
-        z.extractall(dest)
+    try:
+        with zipfile.ZipFile(zpath) as z:
+            root, members = dest.resolve(), z.infolist()
+            if len(members) > 200_000 or sum(m.file_size for m in members) > 2 * MAX_ZIP:
+                raise RuntimeError("Archive is unreasonably large when unpacked")
+            for m in members:
+                target = (dest / m.filename).resolve()
+                if not target.is_relative_to(root) or m.external_attr >> 28 == 0xA:
+                    raise RuntimeError("Archive has an unsafe path: " + m.filename)
+            z.extractall(dest)
+    except (zipfile.BadZipFile, zlib.error, EOFError):
+        raise RuntimeError("The file is damaged or incomplete (not a valid .zip). Nothing was changed; download it again") from None
     base = dest
     for _ in range(3):
         dirs = [d for d in base.iterdir() if d.is_dir()]
@@ -701,8 +837,13 @@ def install(key):
 
 def downloads():
     d = HOME / "Downloads"                            # browsers may save into a subfolder of Downloads
-    zips = sorted([*d.glob("*.zip"), *d.glob("*/*.zip")], key=lambda p: -p.stat().st_mtime)[:12]
-    return [{"name": z.name, "path": str(z), "when": int(z.stat().st_mtime), "size": z.stat().st_size} for z in zips]
+    out = []
+    for z in [*d.glob("*.zip"), *d.glob("*/*.zip")]:
+        try:
+            out.append({"name": z.name, "path": str(z), "when": int(z.stat().st_mtime), "size": z.stat().st_size})
+        except OSError:
+            pass                                        # gone or unreadable between listing and looking
+    return sorted(out, key=lambda x: -x["when"])[:12]
 
 
 def install_file(path):
@@ -842,7 +983,11 @@ def rollback(key):
 
 
 def check():
-    st = sync()
+    try:
+        st = sync()
+    except GameMissing:
+        return view()
+    NOTE.pop("net", None)
 
     def note(key, a, new):
         LIVE[key] = {"latest": new["version"], "latest_id": new["id"], "page": new["page"], "update": not is_current(a, new),
@@ -852,11 +997,18 @@ def check():
         if new.get("thumb"):
             SRC_ART[key] = new["thumb"]
 
+    def failed(key, e):
+        if isinstance(e, Unreachable):                  # said once for everything, not on every addon
+            NOTE["net"] = str(e)
+            LIVE[key] = {**LIVE.get(key, {}), "error": ""}
+        else:
+            LIVE[key] = {"update": False, "error": str(e)}
+
     def one(key, a):
         try:
             note(key, a, latest(key))
         except Exception as e:
-            LIVE[key] = {"update": False, "error": str(e)}
+            failed(key, e)
 
     cfs = {k: a for k, a in st["addons"].items() if k.startswith("cf:")}
     others = [threading.Thread(target=one, args=kv) for kv in st["addons"].items() if kv[0].split(":")[0] in ("gh", "wowi")]
@@ -877,35 +1029,62 @@ def check():
                         raise RuntimeError("CurseForge no longer lists this addon")
                     note(k, a, cf_newest(mods[k]))
                 except Exception as e:
-                    LIVE[k] = {"update": False, "error": str(e)}
+                    failed(k, e)
         except Exception as e:
             for k in cfs:
-                LIVE[k] = {"update": False, "error": str(e)}
+                failed(k, e)
     [t.join() for t in others]
     return view(st)
 
 
+SOURCES = {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "No source"}
+
+
 def view(st=None):
-    st = st or sync()
+    try:
+        st = st or sync()
+        groups = group_folders()
+    except GameMissing as e:
+        return {"addons": [], "game_missing": str(e), "wow_running": False, "has_cf_key": bool(cf_key()), "addons_dir": "",
+                "new_downloads": [], "categories": CATEGORIES, "conflicts": [], "unmanaged": [], "also": {}, "net": ""}
     names = shelf_categories()
     saved = {}                                          # one pass over the game's settings folders for all addons
     for pat in ("*/SavedVariables/*.lua*", "*/*/*/SavedVariables/*.lua*"):
         for f in wtf().glob(pat):
             saved[f.name.split(".lua")[0]] = saved.get(f.name.split(".lua")[0], 0) + 1
-    rows = [{"key": k, "source": {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "No source"}[k.split(":")[0]],
-             "size": folder_size(a["folders"]), "notes": toc(primary(a)).get("notes", ""),
-             "category": a.get("category") or SRC_CAT.get(k) or guess_category(toc(primary(a)), a["name"]),
-             "icon": memo("icon", primary(a), lambda k=k: bool(icon_png(k))), "art": SRC_ART.get(k, ""),
-             "can_rollback": bool(saved_versions(k)), "settings": sum(saved.get(f, 0) for f in a["folders"]),
-             "settings_saved": bool(settings_slots(k)), **a, **LIVE.get(k, {})}
-            for k, a in st["addons"].items()]
-    rows.sort(key=lambda r: r["name"].lower())
-    fresh = [d for d in downloads() if time.time() - d["when"] < 1800 and d["size"] > 0
-             and not any(Path(d["path"] + e).exists() for e in (".crdownload", ".part"))]
+
+    def row(k, a):
+        base = {"key": k, "source": SOURCES[k.split(":")[0]], **a, **LIVE.get(k, {})}
+        try:
+            t = toc(primary(a))
+            return {**base, "size": folder_size(a["folders"]), "notes": t.get("notes", ""),
+                    "category": a.get("category") or SRC_CAT.get(k) or guess_category(t, a["name"]),
+                    "icon": memo("icon", primary(a), lambda: bool(icon_png(k))), "art": SRC_ART.get(k, ""),
+                    "can_rollback": bool(saved_versions(k)), "settings": sum(saved.get(f, 0) for f in a["folders"]),
+                    "settings_saved": bool(settings_slots(k)), "damaged": memo("damage", primary(a), lambda: damage(a))}
+        except Exception as e:                          # one unreadable addon must not hide the rest
+            return {**base, "size": 0, "notes": "", "category": a.get("category") or "Other", "icon": False, "art": "",
+                    "can_rollback": False, "settings": 0, "settings_saved": False,
+                    "damaged": f"This addon's files could not be read ({type(e).__name__})"}
+
+    rows = sorted((row(k, a) for k, a in st["addons"].items()), key=lambda r: r["name"].lower())
+    try:
+        fresh = [d for d in downloads() if time.time() - d["when"] < 1800 and d["size"] > 0
+                 and not any(Path(d["path"] + e).exists() for e in (".crdownload", ".part"))]
+    except OSError:
+        fresh = []
+    owned = {f for a in st["addons"].values() for f in a["folders"]}
+    def why(p):
+        tocs = list((addons_dir() / p).glob("*.toc"))
+        if not tocs:
+            return "it has no description (.toc) file"
+        if not any(re.search(r"(?mi)^##\s*Interface\s*:", slurp(t)) for t in tocs):
+            return "its description (.toc) file is empty or unreadable"
+        return "it is not built for WoW Forever"
+    loose = [{"name": p, "why": why(p)} for p in sorted(groups) if p not in owned]
     return {"addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
-            "new_downloads": fresh, "categories": names, "conflicts": conflicts(st["addons"]),
-            "unmanaged": sorted(p for p in group_folders() if not any(p in a["folders"] for a in st["addons"].values())),
-            "also": {k: v for k, v in ALSO.items() if v in st["addons"] and k not in st["addons"]}}
+            "new_downloads": fresh, "categories": names, "conflicts": conflicts(st["addons"]), "unmanaged": loose,
+            "also": {k: v for k, v in ALSO.items() if v in st["addons"] and k not in st["addons"]}, "net": NOTE.get("net", "")}
 
 
 # ---------- window ----------
@@ -961,6 +1140,9 @@ class H(BaseHTTPRequestHandler):
                     st["addons"][body["key"]]["category"] = body["category"]
                     save(st)
                 r = view()
+            elif route == "folder":
+                set_addons_dir(body["path"])
+                r = view()
             elif route == "key":
                 if not body["key"].strip().isascii() or " " in body["key"].strip():
                     raise RuntimeError("That looks like the hidden (dotted) version of the key. Use the copy button next to it on console.curseforge.com, then paste again")
@@ -979,6 +1161,7 @@ class H(BaseHTTPRequestHandler):
             elif route == "fetch":                      # author-restricted file: through CurseForge's own download page, in the app
                 if not body["url"].startswith("https://www.curseforge.com/") or FETCH is None:
                     raise RuntimeError("This download needs the desktop application")
+                cf("/games/1")                          # fail at once, in plain words, if CurseForge cannot be reached
                 z = FETCH(body["url"])
                 try:
                     name = install_zip(z, source=body["key"])
@@ -997,6 +1180,10 @@ class H(BaseHTTPRequestHandler):
             self.send({"error": str(e), "browser": e.info}, 409)
         except KeyError:
             self.send({"error": "That addon is no longer on your shelf. Refresh and try again"}, 400)
+        except PermissionError as e:
+            self.send({"error": f"No permission to change {e.filename or 'the addon folder'}. Nothing was changed"}, 400)
+        except OSError as e:
+            self.send({"error": "The disk is full. Nothing was changed" if e.errno == 28 else f"A file operation failed ({e.strerror or e}). Nothing was changed"}, 400)
         except Exception as e:
             self.send({"error": str(e)}, 400)
 
@@ -1030,11 +1217,23 @@ class H(BaseHTTPRequestHandler):
 
 def main():
     """The application: a Qt window showing the interface, with its own downloader for CurseForge's download pages."""
-    from PySide6.QtCore import QEvent, QObject, QTimer, QUrl, Signal, Qt
-    from PySide6.QtGui import QDesktopServices, QIcon
-    from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
-    from PySide6.QtWebEngineWidgets import QWebEngineView
-    from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+    try:
+        from PySide6.QtCore import QEvent, QObject, QTimer, QUrl, Signal, Qt
+        from PySide6.QtGui import QDesktopServices, QIcon
+        from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+        from PySide6.QtWebEngineWidgets import QWebEngineView
+        from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout
+    except ImportError as e:
+        sys.exit(f"The Addon Shelf needs PySide6 with Qt WebEngine to show its window ({e}). On Arch: sudo pacman -S pyside6 qt6-webengine")
+    CONF.mkdir(parents=True, exist_ok=True)
+    guard = open(CONF / "lock", "w")                    # one copy at a time: two would overwrite each other's records
+    try:
+        if not os.environ.get("WOWADDONS_SHOT"):
+            fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        box = QApplication(sys.argv[:1])
+        QMessageBox.information(None, "The Addon Shelf", "The Addon Shelf is already open.")
+        sys.exit(0)
 
     H.token = secrets.token_urlsafe(24)
     srv = ThreadingHTTPServer(("127.0.0.1", 0), H)

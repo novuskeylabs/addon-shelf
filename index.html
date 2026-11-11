@@ -62,7 +62,7 @@ h3.group small{font:14.5px Alegreya,serif;color:var(--text2);white-space:nowrap}
 .tile .ico img{width:100%;height:100%;object-fit:cover}.tile:hover .ico{transform:scale(1.04)}
 .tile .nm{align-self:start;font:400 19.5px/1.17 "IM Fell English",serif;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tile .ver{font-size:14px;color:var(--on2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tile .ver b{color:var(--hot-on)}
-.tile .st{display:flex;white-space:nowrap;align-items:center;gap:10px;font-size:14px;color:var(--on2);align-self:end;min-width:0}.tile .st .btn,.tile .ok{margin-left:auto}.tile .ok{color:var(--ok);font-weight:500}
+.tile .st{display:flex;white-space:nowrap;align-items:center;gap:10px;font-size:14px;color:var(--on2);align-self:end;min-width:0}.tile .st .btn,.tile .ok{margin-left:auto}.tile .ok{color:var(--ok);font-weight:500}.tile .bad{margin-left:auto;color:var(--hot-on);font-weight:700}.empty p{margin:0 0 14px}
 .tile,.card{outline:1px solid color-mix(in srgb,var(--surf-line) 75%,transparent);outline-offset:-1px}
 .tile.upd{box-shadow:var(--sh1),0 0 0 2px var(--ember),inset 0 1px 0 var(--card-hi)}
 .tile.upd::after{content:"";position:absolute;top:0;right:14px;width:14px;height:22px;background:var(--ember);clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%)}
@@ -243,7 +243,9 @@ let THEME=applyTheme(localStorage.theme);
  <p id="keystate"></p>
  <h2 style="margin-top:34px">Install from a file you downloaded</h2>
  <p>Works without any key: download an addon’s .zip in your browser, then pick it here. If the addon is already on your shelf it is updated in place.</p>
- <div class="bar"><button class="btn quiet" id="scan">Look in my Downloads folder</button></div><div id="files"></div><p id="dir"></p>
+ <div class="bar"><button class="btn quiet" id="scan">Look in my Downloads folder</button></div><div id="files"></div>
+ <h2 style="margin-top:34px">Addon folder</h2><p id="dir"></p><p>If the game was moved or the app picked the wrong copy, paste the full path of its Interface/AddOns folder here.</p>
+ <div class="bar"><input class="field grow" id="folder" placeholder="/path/to/World of Warcraft/_forever_/Interface/AddOns" aria-label="AddOns folder" autocomplete="off"><button class="btn" id="savefolder">Use this folder</button></div>
  <h2 style="margin-top:34px">Themes</h2><p>Pick a theme: your faction, your class, your race, or a plain colour scheme. Each preview shows how an addon tile and the buttons look in it. The emblems are original paintings made for this app.</p><div id="theme" role="group" aria-label="Theme"></div>
  <h2 style="margin-top:34px">Shortcuts</h2><p><kbd>/</kbd> search &nbsp; <kbd>Esc</kbd> close a page or dialog &nbsp; <kbd>←</kbd><kbd>→</kbd> flip through screenshots. You can also drop a .zip anywhere on the window.</p></section>
 <aside id="page"><div></div></aside>
@@ -256,7 +258,9 @@ let S={addons:[]},sel=null,view=localStorage.view=="list"?"list":"tiles",R=[],sr
 const ICON={check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>',left:'<path d="M15 5l-7 7 7 7"/>',right:'<path d="M9 5l7 7-7 7"/>',alert:'<path d="M12 7v6M12 17h.01"/>'},ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
 let busy=0,checked=0;const prog=d=>{busy+=d;$("#prog").classList.toggle("on",busy>0)};
 async function api(p,body){prog(1);try{return await api0(p,body)}finally{prog(-1)}}
-async function api0(p,body){const r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw Object.assign(new Error(j.error||"Something went wrong"),{browser:j.browser});return j}
+async function api0(p,body){let r,j;
+ try{r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});j=await r.json()}
+ catch{throw new Error("The app stopped answering. Close The Addon Shelf and open it again")}if(!r.ok)throw Object.assign(new Error(j.error||"Something went wrong"),{browser:j.browser});return j}
 // Authors who only allow downloads on CurseForge: show its download page in the app; the file it delivers is installed.
 async function viaBrowser(b,name){const t=tileOf(b.key);t&&t.classList.add("busy");toast(`${name} is only offered on CurseForge. Its download page is opening…`);
  try{const r=await api("fetch",b);S=r;draw();tileOf(b.key)?.classList.add("done");toast(`Installed ${r.installed}`);return true}
@@ -281,11 +285,11 @@ function tile(a,i){const none=a.source=="No source";
  return `<button class="tile${a.update?" upd":""}${a.key==sel?" sel":""}" data-k="${esc(a.key)}" style="--c:${color(a)};--i:${i}">
  <span class="ico">${art(a)}</span>
  <span class="nm">${esc(a.name)}</span><span class="ver">${esc(a.version||"version unknown")}${a.update?`<b> → ${esc(a.latest.slice(0,24))}</b>`:""}</span>
- <span class="st"><span class="src ${a.source}">${esc(a.source)}</span><span>${mb(a.size)}</span>${a.update?`<span class="btn sm" role="button" data-up="${esc(a.key)}">${a.restricted?"Get on CurseForge":"Update"}</span>`:a.latest?`<span class="ok">Up to date</span>`:""}</span></button>`}
+ <span class="st"><span class="src ${a.source}">${esc(a.source)}</span><span>${mb(a.size)}</span>${a.damaged?`<span class="bad">Damaged</span>`:a.update?`<span class="btn sm" role="button" data-up="${esc(a.key)}">${a.restricted?"Get on CurseForge":"Update"}</span>`:a.latest?`<span class="ok">Up to date</span>`:""}</span></button>`}
 // Possible conflicts: a lower-triangle linkage matrix of the installed addons that seem to do the same job.
 function conflicts(){const C=S.conflicts||[],by=k=>S.addons.find(a=>a.key==k),keys=[...new Set(C.flatMap(c=>[c.a,c.b]))].filter(by).sort((x,y)=>by(x).name.localeCompare(by(y).name)),n=keys.length;
  const head=`<h3 class="group" style="margin:2px 0 6px">Possible conflicts<small>${C.length||""}</small></h3>`;
- if(!n){$("#conf").innerHTML=head+`<p class="cnote">None of your ${S.addons.length} addons appear to do the same job. This list updates whenever you install or remove one.</p>`;return}
+ if(!n){$("#conf").innerHTML=head+`<p class="cnote">${S.addons.length?`None of your ${S.addons.length} addons appear to do the same job. This list updates whenever you install or remove one.`:"Nothing to compare yet. Addons that do the same job will be flagged here once you have some installed."}</p>`;return}
  const link=(i,j)=>C.find(c=>(c.a==keys[i]&&c.b==keys[j])||(c.a==keys[j]&&c.b==keys[i]));let g="";
  for(let i=0;i<n;i++){g+=`<button class="clab" data-open="${esc(keys[i])}" data-r="${i}" title="${esc(by(keys[i]).name)}"><span class="cico">${art(by(keys[i]))}</span><span>${esc(by(keys[i]).name)}</span></button>`;
   for(let j=0;j<n;j++){const l=j<i&&link(i,j);g+=j>i?"<i></i>":j==i?`<i class="cdiag" data-r="${i}" data-c="${i}"></i>`:l?`<button class="cdot s${Math.min(3,l.why.length)}" data-r="${i}" data-c="${j}" data-a="${esc(keys[i])}" data-b="${esc(keys[j])}" aria-label="${esc(by(keys[i]).name)} and ${esc(by(keys[j]).name)}: ${esc(l.why.join("; "))}"></button>`:`<i class="ccell" data-r="${i}" data-c="${j}"></i>`}}
@@ -308,21 +312,23 @@ function draw(first){
  const auto=S.addons.filter(a=>a.update&&!a.restricted).length;$("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!auto;$("#upall").textContent=`Update all ${auto}`;
  $("#hints").innerHTML=(S.has_cf_key?"":`<p class="hint"><span>CurseForge is not connected, so ${S.addons.filter(a=>a.source=="CurseForge").length} of your addons cannot be checked for updates.</span><button class="btn sm" data-go="set">Connect CurseForge</button></p>`)
   +(S.new_downloads||[]).filter(d=>!seen.has(d.path)).map(d=>`<p class="hint"><span>New download: <b>${esc(d.name)}</b> (${mb(d.size)}, ${ago(d.when)})</span><button class="btn sm" data-f="${esc(d.path)}">Install it</button><button class="btn sm quiet" data-x="${esc(d.path)}">Not an addon</button></p>`).join("")
-  +((S.unmanaged||[]).length?`<p class="hint"><span>${S.unmanaged.length} folder${S.unmanaged.length>1?"s":""} in your AddOns folder ${S.unmanaged.length>1?"are":"is"} not built for WoW Forever and ${S.unmanaged.length>1?"are":"is"} left alone: ${S.unmanaged.map(esc).join(", ")}</span></p>`:"")
+  +(S.net?`<p class="hint"><span>Could not check for updates. ${esc(S.net)}. Your installed addons are unaffected.</span><button class="btn sm" data-retry>Try again</button></p>`:"")
+  +(S.addons.filter(a=>a.damaged).length?`<p class="hint"><span>${S.addons.filter(a=>a.damaged).map(a=>esc(a.name)).join(", ")} ${S.addons.filter(a=>a.damaged).length>1?"look":"looks"} damaged. Open ${S.addons.filter(a=>a.damaged).length>1?"each":"it"} and reinstall to repair.</span></p>`:"")
+  +((S.unmanaged||[]).length?`<p class="hint"><span>Left alone in your AddOns folder: ${S.unmanaged.map(u=>`${esc(u.name)} (${esc(u.why)})`).join("; ")}.</span></p>`:"")
   +(loose?`<p class="hint"><span>${loose} addons have no source recorded, so they cannot be checked for updates. Open one and choose “Find in catalog” to link it.</span></p>`:"");
  $("#tiles").hidden=view!="tiles";$("#list").hidden=view!="list";$$(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view==view));
  const shown=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)),groups={};shown.forEach(a=>(groups[a.category]??=[]).push(a));let i=0;
  $("#tiles").className=first?"first":"";
- $("#tiles").innerHTML=shown.length?[...(S.categories||[]).filter(c=>groups[c]),...Object.keys(groups).filter(c=>!(S.categories||[]).includes(c))].map(c=>`<div class="tg"><h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div></div>`).join(""):`<p class="empty" style="flex:1">No addon matches “${esc($("#filter").value)}”.</p>`;
+ $("#tiles").innerHTML=S.game_missing?`<div class="empty"><p>${esc(S.game_missing)}.</p><p><button class="btn" data-again>Look again</button> <button class="btn quiet" data-go="set">Choose the folder in Settings</button></p></div>`:shown.length?[...(S.categories||[]).filter(c=>groups[c]),...Object.keys(groups).filter(c=>!(S.categories||[]).includes(c))].map(c=>`<div class="tg"><h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div></div>`).join(""):`<p class="empty" style="flex:1">No addon matches “${esc($("#filter").value)}”.</p>`;
  $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
- $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent="Addon folder: "+(S.addons_dir||"");
+ $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent=S.addons_dir?"Currently using: "+S.addons_dir:"No addon folder found yet.";
  conflicts();if(sel)openPage(sel)}
 function openPage(k){const a=S.addons.find(x=>x.key==k);if(!a){closePage();return}sel=k;$$(".tile").forEach(s=>s.classList.toggle("sel",s.dataset.k==k));const loose=a.source=="No source";
  $("#page").style.setProperty("--pc",color(a));
- $("#page>div").innerHTML=`<span class="badge ${a.update?"new":loose?"loose":""}">${a.update?"Newer version available":loose?"No source recorded":a.latest?"Up to date":"Linked to "+esc(a.source)}</span><h2>${esc(a.name)}</h2><p class="by">${esc(a.notes||"No description in the addon.")}</p>
+ $("#page>div").innerHTML=`<span class="badge ${a.damaged||a.update?"new":loose?"loose":""}">${a.damaged?"Damaged":a.update?"Newer version available":loose?"No source recorded":a.latest?"Up to date":"Linked to "+esc(a.source)}</span><h2>${esc(a.name)}</h2><p class="by">${esc(a.notes||"No description in the addon.")}</p>
  <dl><dt>Installed</dt><dd>${esc(a.version||"unknown")}</dd>${a.latest?`<dt>Newest</dt><dd>${esc(a.latest)}</dd>`:""}<dt>Source</dt><dd>${esc(a.source)}</dd><dt>Category</dt><dd><select class="field" data-cat style="height:32px;padding:0 8px">${(S.categories||[]).map(c=>`<option${c==a.category?" selected":""}>${esc(c)}</option>`).join("")}</select></dd><dt>Size</dt><dd>${mb(a.size)}</dd><dt>Settings</dt><dd>${a.settings?`${a.settings} saved file${a.settings>1?"s":""}`:a.settings_saved?"Default (reset)":"Default (none saved yet)"}</dd><dt>Folders</dt><dd>${a.folders.length>3?a.folders.length+" folders, the main one being "+esc([...a.folders].sort((x,y)=>x.length-y.length)[0]):a.folders.map(esc).join(", ")}</dd></dl>
- ${a.error?`<p class="warn">${esc(a.error)}</p>`:""}${a.restricted?`<p>This author only allows downloads on CurseForge itself, so its download page opens in the app and the file is installed for you from there.</p>`:""}${loose?`<p>There is nowhere to check this addon for updates yet. Find it in the catalog and install it from there to link it.</p>`:""}
- <div class="acts">${loose?`<button class="btn" data-a="find">Find in catalog</button>`:`<button class="btn" data-a="install">${a.restricted?"Get on CurseForge":a.update?"Update":"Reinstall"}</button><button class="btn quiet" data-a="info">Screenshots and details</button>`}
+ ${a.damaged?`<p class="warn">${esc(a.damaged)}. Reinstalling replaces its files with a fresh copy; your settings are kept.</p>`:""}${a.error?`<p class="warn">${esc(a.error)}</p>`:""}${a.restricted?`<p>This author only allows downloads on CurseForge itself, so its download page opens in the app and the file is installed for you from there.</p>`:""}${loose?`<p>There is nowhere to check this addon for updates yet. Find it in the catalog and install it from there to link it.</p>`:""}
+ <div class="acts">${loose?`<button class="btn" data-a="find">Find in catalog</button>`:`<button class="btn" data-a="install">${a.damaged&&!a.restricted?"Reinstall to repair":a.restricted?"Get on CurseForge":a.update?"Update":"Reinstall"}</button><button class="btn quiet" data-a="info">Screenshots and details</button>`}
  ${a.can_rollback?`<button class="btn quiet" data-a="rollback">Restore previous version</button>`:""}
  ${a.settings?`<button class="btn quiet" data-a="reset">Reset to default settings</button>`:""}${a.settings_saved?`<button class="btn quiet" data-a="unreset">Undo settings reset</button>`:""}<button class="btn danger" data-a="remove">Remove</button><button class="btn quiet" data-a="close">Close</button></div>`;
  $("#page").classList.add("on")}
@@ -333,9 +339,10 @@ async function act(route,key,done){const t=tileOf(key);t&&t.classList.add("busy"
   if(route!="remove"){const n=tileOf(key);n&&n.classList.add("done")}toast(done);return true}
  catch(e){if(e.browser)return viaBrowser(e.browser,S.addons.find(x=>x.key==key)?.name||"the addon");toast(e.message,1);t&&t.classList.remove("busy")}}
 $("#tiles").onclick=e=>{const u=e.target.closest("[data-up]"),t=e.target.closest(".tile");
+ if(e.target.closest("[data-again]"))return api("check").then(n=>{S=n;draw();if(!S.game_missing)toast("Found your addon folder")}).catch(x=>toast(x.message,1));if(e.target.closest("[data-go]"))return show(e.target.closest("[data-go]").dataset.go);
  if(u){const a=S.addons.find(x=>x.key==u.dataset.up);act("install",a.key,`Updated ${a.name}`)}else if(t)t.dataset.k==sel?closePage():openPage(t.dataset.k)};
 $("#list").onclick=e=>{const u=e.target.closest("[data-up]"),r=e.target.closest("tr[data-k]");if(u){const a=S.addons.find(x=>x.key==u.dataset.up);u.disabled=true;act("install",a.key,`Updated ${a.name}`)}else if(r)openPage(r.dataset.k)};
-$("#hints").onclick=async e=>{const t=e.target;if(t.dataset.go)show(t.dataset.go);else if(t.dataset.x){markSeen(t.dataset.x);draw()}
+$("#hints").onclick=async e=>{const t=e.target;if(t.dataset.go)show(t.dataset.go);else if("retry" in t.dataset)$("#chk").click();else if(t.dataset.x){markSeen(t.dataset.x);draw()}
  else if(t.dataset.f){t.disabled=true;try{const r=await api("install_file",{path:t.dataset.f});markSeen(t.dataset.f);S=r;draw();toast(`Installed ${r.installed}`)}catch(x){t.disabled=false;toast(x.message,1)}}};
 $("#filter").oninput=()=>draw();$(".seg").onclick=e=>{if(e.target.dataset.view){view=localStorage.view=e.target.dataset.view;draw()}};
 $("#page").onchange=async e=>{if(e.target.matches("[data-cat]"))try{S=await api("category",{key:sel,category:e.target.value});draw();toast("Moved to "+e.target.value)}catch(x){toast(x.message,1)}};
@@ -367,7 +374,7 @@ function catUI(){$("#sort").hidden=mode!="search";$("#srcs").hidden=mode!="searc
 async function find(){if(!$("#q").value.trim())return landing();mode="search";catUI();$("#results").innerHTML=`<div class="grid">${'<div class="skel"></div>'.repeat(8)}</div>`;
  try{const r=await api("search?q="+encodeURIComponent($("#q").value));R=r.results;srcOn="All";
   $("#catnote").innerHTML=r.errors.map(m=>`<p class="hint"><span>${esc(m)}</span>${/key/.test(m)?'<button class="btn sm" data-go="set">Open Settings</button>':""}</p>`).join("");paint()}
- catch(e){$("#results").innerHTML=`<p class="empty">${esc(e.message)}</p>`}}
+ catch(e){$("#results").innerHTML=`<div class="empty"><p>${esc(e.message)}.</p><p><button class="btn" data-retry>Try again</button></p></div>`}}
 function paint(){const counts={All:R.length};R.forEach(r=>counts[r.source]=(counts[r.source]||0)+1);
  $("#srcs").innerHTML=Object.entries(counts).map(([s,n])=>`<button aria-pressed="${s==srcOn}" data-s="${s}">${s=="All"?"All sources":s}<small>${n}</small></button>`).join("");
  const rows=R.filter(r=>srcOn=="All"||r.source==srcOn),m=$("#sort").value,pop=(a,b)=>b.downloads-a.downloads;
@@ -375,9 +382,9 @@ function paint(){const counts={All:R.length};R.forEach(r=>counts[r.source]=(coun
  if(m=="cat"){const g={};rows.forEach(r=>(g[r.category]??=[]).push(r));
   $("#results").innerHTML=Object.entries(g).sort((a,b)=>b[1].reduce((s,r)=>s+r.downloads,0)-a[1].reduce((s,r)=>s+r.downloads,0)).map(([c,l])=>`<h3 class="group">${esc(c)}<small>${l.length}</small></h3><div class="grid">${l.sort(pop).map(card).join("")}</div>`).join("")}
  else $("#results").innerHTML=`<div class="grid">${rows.sort(m=="pop"?pop:m=="new"?(a,b)=>b.updated-a.updated:(a,b)=>a.name.localeCompare(b.name)).map(card).join("")}</div>`}
-const secBody=id=>{const t=TOP[id];return !t||t.loading?'<div class="skel"></div>'.repeat(5):t.error?`<p class="note">${esc(t.error)}</p>`:t.rows.map(card).join("")};
+const secBody=id=>{const t=TOP[id];return !t||t.loading?'<div class="skel"></div>'.repeat(5):t.error?`<p class="note">${esc(t.error)}. It will be tried again shortly.</p>`:t.rows.map(card).join("")};
 async function landing(){mode="landing";LIST=null;catUI();
- if(!CATS){$("#results").innerHTML=`<div class="grid">${'<div class="skel"></div>'.repeat(8)}</div>`;try{CATS=(await api("categories")).categories}catch(e){$("#results").innerHTML=`<p class="empty">${esc(e.message)}</p>`;return}}
+ if(!CATS){$("#results").innerHTML=`<div class="grid">${'<div class="skel"></div>'.repeat(8)}</div>`;try{CATS=(await api("categories")).categories}catch(e){$("#results").innerHTML=`<div class="empty"><p>${esc(e.message)}.</p><p><button class="btn" data-retry>Try again</button></p></div>`;return}}
  if(mode!="landing")return;
  $("#results").innerHTML=CATS.map(c=>`<div class="csec" data-c="${c.id}"${TOP[c.id]&&!TOP[c.id].loading&&!TOP[c.id].error&&!TOP[c.id].rows.length?" hidden":""}><h3 class="group">${esc(c.name)}<small>${TOP[c.id]?.total?"top 10 of "+TOP[c.id].total.toLocaleString():""}</small><span class="btn sm quiet" role="button" data-all="${c.id}">View all</span></h3><div class="grid">${secBody(c.id)}</div></div>`).join("");
  near()}
@@ -402,7 +409,7 @@ async function install(key,name,btn){const host=btn?.closest(".card,tr");if(btn)
 async function uninstall(key,name,btn){if(btn&&!btn.dataset.sure){btn.dataset.sure=1;btn.textContent="Click again to uninstall";setTimeout(()=>{if(btn.isConnected){delete btn.dataset.sure;btn.textContent="Uninstall"}},4000);return}
  try{S=await api("remove",{key:mine(key)});if(sel==mine(key))closePage();draw();recat();toast(`Uninstalled ${name}. A copy is kept in case you want it back.`);return true}catch(x){toast(x.message,1)}}
 $("#results").onclick=e=>{const t=e.target,i=t.closest("[data-i]"),u=t.closest("[data-u]"),k=t.closest("[data-k]");
- if(t.closest("[data-all]"))openList(t.closest("[data-all]").dataset.all);else if(t.closest("[data-back]"))landing();else if(t.closest("[data-more]")){t.disabled=true;more()}
+ if(t.closest("[data-retry]"))find();else if(t.closest("[data-all]"))openList(t.closest("[data-all]").dataset.all);else if(t.closest("[data-back]"))landing();else if(t.closest("[data-more]")){t.disabled=true;more()}
  else if(i){if(!i.hasAttribute("aria-disabled")){const r=rowOf(i.dataset.i);install(r.key,r.name,i)}}else if(u){const r=rowOf(u.dataset.u);uninstall(r.key,r.name,u)}else if(k)info(k.dataset.k)};
 /* details dialog */
 function shot(i){si=(i+shots.length)%shots.length;$("#big").src=shots[si];$$(".thumbs img").forEach((t,j)=>t.classList.toggle("on",j==si))}
@@ -426,6 +433,7 @@ $("#dlg").onclick=async e=>{const d=$("#dlg"),a=e.target.dataset.d;if(e.target.d
  else if(a=="install"){e.target.disabled=true;e.target.textContent="Installing…";if(await install(d.dataset.key,d.dataset.name))d.close();else{e.target.disabled=false;e.target.textContent="Install"}}
  else if(a=="remove"){if(await uninstall(d.dataset.key,d.dataset.name,e.target))d.close()}};
 $("#dlg").onkeydown=e=>{if(shots.length>1){if(e.key=="ArrowLeft")shot(si-1);if(e.key=="ArrowRight")shot(si+1)}};
+$("#savefolder").onclick=async()=>{const v=$("#folder").value.trim();if(!v)return toast("Paste the folder path first",1);try{S=await api("folder",{path:v});$("#folder").value="";draw();show("lib");$("#chk").click();toast("Now using that folder")}catch(e){toast(e.message,1)}};
 $("#savekey").onclick=async()=>{const k=$("#key").value.trim();if(!k)return toast("Paste the key first",1);try{const r=await api("key",{key:k});$("#key").value="";if(r.restarting){toast("Key saved. Restarting to apply it…");$("#savekey").disabled=true;return}S=await api("state");R=[];CATS=null;TOP={};draw();toast("Key saved")}catch(e){toast(e.message,1)}};
 $("#scan").onclick=async()=>{try{const r=await api("downloads");$("#files").innerHTML=r.files.length?`<table class="tbl" style="margin-bottom:20px"><tbody>${r.files.map(f=>`<tr><td>${esc(f.name)}</td><td>${mb(f.size)}</td><td>${ago(f.when)}</td><td><button class="btn sm" data-f="${esc(f.path)}">Install</button></td></tr>`).join("")}</tbody></table>`:`<p>No .zip files in Downloads.</p>`}catch(e){toast(e.message,1)}};
 $("#files").onclick=async e=>{const b=e.target.closest("[data-f]");if(!b)return;b.disabled=true;try{const r=await api("install_file",{path:b.dataset.f});S=r;draw();b.textContent="Installed";toast(`Installed ${r.installed}`)}catch(x){b.disabled=false;toast(x.message,1)}};
