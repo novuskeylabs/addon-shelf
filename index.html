@@ -1,0 +1,226 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Addon Shelf</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--oak:#2b1d14;--oak2:#3a281b;--felt:#1d3b36;--felt2:#16302c;--vellum:#efe1c0;--vellum2:#d9c59a;--brass:#c9a04f;--brass2:#f0cd7c;--ember:#e0672f;--ink:#1c120c;--muted:#6b563a;
+ --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E")}
+*{box-sizing:border-box}[hidden]{display:none!important}html,body{height:100%;margin:0}
+body{background:var(--grain),radial-gradient(120% 90% at 50% 0,#4a3322 0,var(--oak) 55%,#170f0a 100%);color:var(--vellum);font:17px/1.5 Alegreya,Georgia,serif;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #fff3d6;outline-offset:2px}
+#embers{position:fixed;inset:0;pointer-events:none;opacity:.6;z-index:0}
+header{display:flex;align-items:center;gap:22px;padding:14px 32px 0;position:relative;z-index:1}
+h1{font:400 36px/1 "IM Fell English",serif;margin:0 0 12px;text-shadow:0 2px 0 #0008;white-space:nowrap}h1 i{color:var(--brass)}
+#status{margin:0 0 12px;font-size:15px;padding:4px 12px;border-radius:99px;border:1px solid #c9a04f55;color:var(--vellum2);display:flex;align-items:center;gap:8px}
+#status::before{content:"";width:9px;height:9px;border-radius:50%;background:#6fbf7a;box-shadow:0 0 8px #6fbf7a}
+#status.locked::before{background:var(--ember);box-shadow:0 0 8px var(--ember)}
+nav{display:flex;gap:4px;margin-left:auto;align-self:flex-end}
+nav button{font-weight:500;font-size:18px;color:var(--vellum2);background:#0003;border:1px solid #c9a04f44;border-bottom:0;padding:9px 22px 11px;border-radius:10px 10px 0 0;cursor:pointer;transition:background .15s}
+nav button:hover{background:#0006}nav button[aria-selected=true]{background:var(--felt);color:#fff3d6;border-color:var(--brass)}
+nav b{background:var(--ember);color:#fff;border-radius:99px;font-size:13px;padding:1px 8px;margin-left:6px}
+main{position:relative;z-index:1;height:calc(100% - 72px);background:var(--grain),linear-gradient(var(--felt),var(--felt2));border-top:2px solid var(--brass);box-shadow:inset 0 14px 30px #0007;display:flex}
+section{flex:1;overflow:auto;padding:24px 32px 70px;display:none;scrollbar-color:#c9a04f66 #0000}section.on{display:block}
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.bar .grow{flex:1;min-width:220px}
+.field{padding:9px 14px;border-radius:8px;border:1px solid #c9a04f88;background:#0f2521;color:#fff3d6}
+.field::placeholder{color:#9db3ab}select.field{cursor:pointer}select.field option{background:#0f2521}
+.btn{font-weight:500;padding:8px 18px;border-radius:8px;border:1px solid #7a5a22;background:linear-gradient(#e7c471,#b98a37);color:var(--ink);cursor:pointer;box-shadow:0 2px 0 #5d4317,inset 0 1px 0 #fff6;white-space:nowrap;text-decoration:none;display:inline-block;transition:filter .15s}
+.btn:hover{filter:brightness(1.08)}.btn:active{transform:translateY(2px);box-shadow:none}.btn[disabled]{filter:grayscale(.7);opacity:.6;cursor:default}
+.btn.quiet{background:#0000;color:var(--vellum);border-color:#c9a04f88;box-shadow:none}.btn.quiet:hover{background:#fff1}
+.btn.danger{background:linear-gradient(#b5482a,#8a2f18);color:#ffe9dc;border-color:#5c1d0d;box-shadow:0 2px 0 #4a160a}
+.btn.sm{padding:4px 12px;font-size:15.5px}
+.seg{display:flex;border:1px solid #c9a04f88;border-radius:8px;overflow:hidden}.seg button{background:none;border:0;padding:8px 14px;cursor:pointer;color:var(--vellum2)}.seg button[aria-pressed=true]{background:var(--brass);color:var(--ink);font-weight:500}
+.hint{background:#0003;border:1px solid #c9a04f55;border-left:4px solid var(--brass);border-radius:6px;padding:10px 16px;margin:0 0 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}.hint span{flex:1;min-width:240px}
+.legend{display:flex;gap:20px;color:#bcd0c8;font-size:15px;margin:18px 4px 0;flex-wrap:wrap}.legend i{display:inline-block;width:11px;height:16px;border-radius:2px;margin-right:7px;vertical-align:-2px}
+/* shelf */
+#shelf{display:flex;flex-wrap:wrap;align-items:flex-end;gap:0 5px;row-gap:26px;padding:0 16px 26px;
+ background:repeating-linear-gradient(to bottom,#0000 0 262px,#5b3d25 262px 265px,#80583a 265px 281px,#2a1a0f 281px 288px);border-radius:4px}
+.spine{position:relative;height:var(--h);width:var(--w);margin-top:calc(262px - var(--h));border:0;padding:0;cursor:pointer;color:#f6e7c3;
+ background:linear-gradient(90deg,#0007,#fff2 16%,#0000 42%,#0006),var(--c);border-radius:3px 3px 1px 1px;box-shadow:inset 0 0 0 1px #0006,2px 0 5px #0007;
+ transition:transform .25s cubic-bezier(.3,1.5,.5,1),filter .2s;animation:drop .5s backwards cubic-bezier(.3,1.3,.5,1);animation-delay:calc(var(--i)*26ms)}
+.spine::before,.spine::after{content:"";position:absolute;left:0;right:0;height:9px;background:linear-gradient(var(--brass2),#9a7430);box-shadow:0 1px 0 #0006}
+.spine::before{top:16px}.spine::after{bottom:16px}
+.spine span{position:absolute;inset:34px 0;writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;font:400 17px/1.05 "IM Fell English",serif;overflow:hidden;white-space:nowrap;text-shadow:0 1px 0 #000a}
+.spine:hover,.spine.sel{transform:translateY(-14px);filter:brightness(1.12)}
+.spine.loose{background:linear-gradient(90deg,#0004,#fff2 16%,#0000 42%,#0004),#93876d;color:#2a2118}.spine.loose::before,.spine.loose::after{background:#5d5442}.spine.loose span{text-shadow:none}
+.spine.dim{opacity:.18}
+.spine .mark{position:absolute;top:-14px;left:50%;width:12px;height:44px;margin-left:-6px;background:var(--ember);clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);animation:glow 1.6s ease-in-out infinite alternate}
+.spine.busy{animation:busy .5s linear infinite}
+@keyframes drop{from{transform:translateY(-60px);opacity:0}}@keyframes glow{to{filter:brightness(1.5) drop-shadow(0 0 6px #ff9a4f)}}
+@keyframes busy{25%{transform:translateY(-14px) rotate(-1.5deg)}75%{transform:translateY(-14px) rotate(1.5deg)}}
+/* list view */
+#list,.tbl{width:100%;border-collapse:collapse;background:var(--vellum);color:var(--ink);border-radius:8px;overflow:hidden;box-shadow:0 4px 0 #0005}
+#list th{text-align:left;font-weight:700;padding:10px 14px;background:#dcc999;border-bottom:1px solid #b9a577}
+#list td,.tbl td{padding:9px 14px;border-bottom:1px solid #d8c696;vertical-align:middle}#list tr:last-child td{border:0}
+#list tbody tr{cursor:pointer}#list tbody tr:hover{background:#f7ecd0}
+#list .chip{display:inline-block;width:10px;height:22px;border-radius:2px;margin-right:10px;vertical-align:middle}
+#list .new{color:#a8401f;font-weight:700}
+/* open page */
+aside{width:0;overflow:hidden;transition:width .35s ease;background:var(--grain),linear-gradient(90deg,#0003,#0000 30px),var(--vellum);color:var(--ink);box-shadow:-10px 0 30px #0008;flex:none}
+aside.on{width:410px}aside>div{width:410px;padding:28px 30px 40px;height:100%;overflow:auto}
+h2{font:400 31px/1.1 "IM Fell English",serif;margin:0 0 4px}
+.by{font-style:italic;color:#5d4a33;margin:0 0 16px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:5px 16px;margin:16px 0;border-top:1px solid #b9a577;border-bottom:1px solid #b9a577;padding:12px 0}
+dt{color:var(--muted)}dd{margin:0;word-break:break-word}
+.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+aside .btn.quiet,dialog .btn.quiet{color:var(--ink);border-color:#7a5a22}aside .btn.quiet:hover,dialog .btn.quiet:hover{background:#0001}
+.warn{color:#8a2f18;font-weight:500}
+/* catalog */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.chips button{background:#0003;border:1px solid #c9a04f55;border-radius:99px;padding:4px 14px;cursor:pointer;color:var(--vellum2);font-size:15.5px}
+.chips button[aria-pressed=true]{background:var(--brass);color:var(--ink);border-color:var(--brass);font-weight:500}.chips small{opacity:.7;margin-left:5px}
+h3.group{font:400 25px "IM Fell English",serif;margin:26px 0 12px;display:flex;align-items:center;gap:14px;color:#fff3d6}h3.group::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#c9a04f99,#0000)}
+h3.group small{font:15px Alegreya,serif;color:#bcd0c8}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.card{display:grid;grid-template-columns:72px 1fr;gap:4px 14px;background:var(--grain),var(--vellum);color:var(--ink);padding:16px;border-radius:4px 14px 4px 14px;box-shadow:0 4px 0 #0005;cursor:pointer;text-align:left;border:0;transition:transform .15s,box-shadow .15s;align-content:start}
+.card:hover{transform:translateY(-3px);box-shadow:0 7px 0 #0005,0 0 0 2px var(--brass)}
+.card img,.card .ph{width:72px;height:72px;border-radius:6px;object-fit:cover;background:var(--oak2);grid-row:span 2;box-shadow:0 0 0 1px #0003}
+.card .ph{display:grid;place-items:center;font:400 34px "IM Fell English",serif;color:var(--brass)}
+.card h4{font:400 21px/1.15 "IM Fell English",serif;margin:0}
+.card p{margin:0;font-size:15.5px;color:#4b3b28;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14.5px;color:#5d4a33;margin-top:8px;padding-top:8px;border-top:1px solid #cdb986;align-items:center}
+.card .meta .btn{margin-left:auto}
+.src{font-weight:700}.src.CurseForge{color:#b5482a}.src.GitHub{color:#2c4a6e}.src.WoWInterface{color:#1f5a4f}
+.skel{height:150px;border-radius:4px 14px 4px 14px;background:linear-gradient(100deg,#efe1c022 30%,#efe1c044 50%,#efe1c022 70%);background-size:200% 100%;animation:sh 1.2s linear infinite}@keyframes sh{to{background-position:-200% 0}}
+.empty{text-align:center;padding:50px 20px;color:#bcd0c8;font-size:19px}
+/* details dialog */
+dialog{border:0;padding:0;width:min(1000px,94vw);max-height:90vh;border-radius:6px 22px 6px 22px;background:var(--grain),var(--vellum);color:var(--ink);box-shadow:0 0 0 2px var(--brass),0 30px 80px #000c;overflow:hidden}
+dialog[open]{display:flex;flex-direction:column;animation:pop .25s cubic-bezier(.3,1.3,.5,1)}@keyframes pop{from{transform:scale(.94);opacity:0}}
+dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
+.dhead{display:flex;gap:18px;padding:22px 26px 16px;align-items:flex-start;border-bottom:1px solid #b9a577}
+.dhead img{width:84px;height:84px;border-radius:8px;object-fit:cover;background:var(--oak2)}.dhead div{flex:1;min-width:0}
+.dhead .x{background:none;border:0;font-size:30px;line-height:1;cursor:pointer;color:var(--muted);padding:0 4px}
+.stats{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:8px;font-size:15.5px;color:#4b3b28}.stats b{font-weight:700;color:var(--ink)}
+.dbody{overflow:auto;padding:18px 26px 8px;flex:1}
+.shot{position:relative;background:#120c08;border-radius:8px;overflow:hidden;aspect-ratio:16/9;display:grid;place-items:center}
+.shot img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in}
+.shot button{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;background:#000a;color:#fff;font-size:28px;cursor:pointer}.shot .p{left:0;border-radius:0 8px 8px 0}.shot .n{right:0;border-radius:8px 0 0 8px}
+.thumbs{display:flex;gap:8px;margin:10px 0 4px;overflow-x:auto;padding-bottom:4px}.thumbs img{height:58px;border-radius:4px;cursor:pointer;opacity:.6;border:2px solid #0000}.thumbs img.on{opacity:1;border-color:var(--ember)}
+#desc{width:100%;border:0;min-height:240px;margin-top:12px}
+.dfoot{display:flex;gap:10px;padding:14px 26px;border-top:1px solid #b9a577;background:#e3d2a8;align-items:center}.dfoot span{margin-right:auto;color:var(--muted);font-size:15px}
+#set{max-width:760px}#set p{max-width:64ch}#set a{color:var(--brass2)}#set ol{padding-left:22px;max-width:64ch}#set li{margin:6px 0}
+#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,90px);background:var(--ink);color:var(--vellum);border:1px solid var(--brass);padding:11px 22px;border-radius:8px;transition:transform .3s;max-width:80vw;z-index:99}
+#toast.on{transform:translate(-50%,0)}#toast.bad{border-color:var(--ember);color:#ffd9c7}
+@media (max-width:860px){aside.on{position:absolute;inset:0;width:100%;z-index:5}aside>div{width:100%}header{flex-wrap:wrap;gap:4px 14px}#status{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}#embers{display:none}}
+</style></head><body>
+<canvas id="embers"></canvas>
+<header><h1>The Addon <i>Shelf</i></h1><p id="status"></p>
+<nav role="tablist"><button role="tab" data-v="lib" aria-selected="true">My addons<b id="badge" hidden></b></button><button role="tab" data-v="cat">Catalog</button><button role="tab" data-v="set">Settings</button></nav></header>
+<main>
+<section id="lib">
+ <div class="bar"><input class="field grow" id="filter" placeholder="Filter my addons" autocomplete="off">
+  <div class="seg" role="group" aria-label="View"><button data-view="shelf" aria-pressed="true">Shelf</button><button data-view="list" aria-pressed="false">List</button></div>
+  <button class="btn quiet" id="chk">Check for updates</button><button class="btn" id="upall" hidden>Update all</button></div>
+ <div id="hints"></div><div id="shelf"></div><table id="list" hidden><thead><tr><th>Addon</th><th>Installed</th><th>Newest</th><th>Source</th><th>Size</th><th></th></tr></thead><tbody></tbody></table>
+ <p class="legend" id="legend"></p></section>
+<section id="cat">
+ <div class="bar"><input class="field grow" id="q" placeholder="Search the catalog, or paste a GitHub link" autocomplete="off"><button class="btn" id="go">Search</button>
+  <select class="field" id="sort" aria-label="Sort"><option value="cat">By category, most popular first</option><option value="pop">Most popular</option><option value="new">Recently updated</option><option value="name">Name</option></select></div>
+ <div class="chips" id="srcs"></div><div id="catnote"></div><div id="results"></div></section>
+<section id="set"><h2 style="color:#fff3d6">Settings</h2>
+ <p>Most WoW Forever addons are published on CurseForge. It only lets tools like this search and download with a free personal key.</p>
+ <ol><li>Open <a href="https://console.curseforge.com/" target="_blank" rel="noopener">console.curseforge.com</a> and sign in.</li><li>Open “API keys” in the left menu and copy the key shown there.</li><li>Paste it below and save. It stays on this computer.</li></ol>
+ <div class="bar"><input class="field grow" id="key" type="password" placeholder="Paste the CurseForge key" aria-label="CurseForge key"><button class="btn" id="savekey">Save key</button></div>
+ <p id="keystate"></p>
+ <h2 style="color:#fff3d6;margin-top:34px">Install from a file you downloaded</h2>
+ <p>Works without any key: download an addon’s .zip in your browser, then pick it here. If the addon is already on your shelf it is updated in place.</p>
+ <div class="bar"><button class="btn quiet" id="scan">Look in my Downloads folder</button></div><div id="files"></div><p id="dir"></p></section>
+<aside id="page"><div></div></aside>
+</main>
+<dialog id="dlg"></dialog><div id="toast" role="status"></div>
+<script>
+const T="__TOKEN__",$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let S={addons:[]},sel=null,view=localStorage.view||"shelf",R=[],srcOn="All",shots=[],si=0;
+async function api(p,body){const r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw new Error(j.error||"Something went wrong");return j}
+function toast(m,bad){const t=$("#toast");t.textContent=m;t.className="on"+(bad?" bad":"");clearTimeout(toast.t);toast.t=setTimeout(()=>t.className="",bad?8000:3200)}
+const hash=s=>[...s].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7),LEATHER=["#6e2a22","#27405c","#2f5131","#5a3a1e","#4c2c52","#7a4a1c","#1f4a4a","#5c2338"];
+const mb=n=>n>1<<30?(n/2**30).toFixed(1)+" GB":Math.max(1,Math.round(n/2**20))+" MB",compact=new Intl.NumberFormat("en",{notation:"compact",maximumFractionDigits:1});
+function ago(t){if(!t)return"";const d=(Date.now()/1000-t)/86400;return d<1?"today":d<2?"yesterday":d<31?Math.floor(d)+" days ago":d<365?(m=>m<2?"last month":m+" months ago")(Math.floor(d/30.4)):new Date(t*1000).toLocaleDateString(undefined,{year:"numeric",month:"short"})}
+const color=a=>a.source=="Unlinked"?"#93876d":LEATHER[hash(a.key)%8];
+function draw(first){
+ const n=S.addons.length,u=S.addons.filter(a=>a.update).length,loose=S.addons.filter(a=>a.source=="Unlinked").length,f=$("#filter").value.toLowerCase();
+ $("#status").textContent=S.wow_running?"World of Warcraft is running: changes are locked":"World of Warcraft is closed: safe to make changes";$("#status").className=S.wow_running?"locked":"";
+ $("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!u;$("#upall").textContent=`Update all ${u}`;
+ $("#hints").innerHTML=(S.has_cf_key?"":`<p class="hint"><span>CurseForge is not connected, so ${S.addons.filter(a=>a.source=="CurseForge").length} of your addons cannot be checked for updates.</span><button class="btn sm" data-go="set">Connect CurseForge</button></p>`)
+  +(loose?`<p class="hint"><span>${loose} addons were added by hand and have no source to update from. Open one and choose “Find in catalog” to link it.</span></p>`:"");
+ $("#legend").innerHTML=`<span>${n} addons</span><span><i style="background:#6e2a22"></i>Linked to a source</span><span><i style="background:#93876d"></i>Added by hand</span><span><i style="background:var(--ember)"></i>Newer version available</span>`;
+ $("#shelf").hidden=view!="shelf";$("#list").hidden=view!="list";$$(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view==view));
+ $("#shelf").innerHTML=S.addons.map((a,i)=>{const h=hash(a.key),w=Math.round(38+Math.min(44,Math.log2(1+a.size/2**20)*5));
+  return `<button class="spine${a.source=="Unlinked"?" loose":""}${a.key==sel?" sel":""}${f&&!a.name.toLowerCase().includes(f)?" dim":""}" data-k="${esc(a.key)}" title="${esc(a.name)} ${esc(a.version)}${a.update?" (newer version available)":""}" style="--h:${196+h%58}px;--w:${w}px;--c:${color(a)};--i:${first?i:0}">${a.update?'<b class="mark"></b>':""}<span>${esc(a.name)}</span></button>`}).join("");
+ $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source=="Unlinked"?"Added by hand":a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
+ $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent="Addon folder: "+(S.addons_dir||"");
+ if(sel)openPage(sel)}
+function openPage(k){const a=S.addons.find(x=>x.key==k);if(!a){closePage();return}sel=k;$$(".spine").forEach(s=>s.classList.toggle("sel",s.dataset.k==k));const loose=a.source=="Unlinked";
+ $("#page>div").innerHTML=`<h2>${esc(a.name)}</h2><p class="by">${esc(a.notes||"No description in the addon.")}</p>
+ <dl><dt>Installed</dt><dd>${esc(a.version||"unknown")}</dd>${a.latest?`<dt>Newest</dt><dd>${esc(a.latest)}</dd>`:""}<dt>Source</dt><dd>${esc(loose?"Added by hand":a.source)}</dd><dt>Size</dt><dd>${mb(a.size)}</dd><dt>Folders</dt><dd>${a.folders.length>3?a.folders.length+" folders, starting with "+esc(a.folders[0]):a.folders.map(esc).join(", ")}</dd></dl>
+ ${a.error?`<p class="warn">${esc(a.error)}</p>`:""}${loose?`<p>There is nowhere to check this addon for updates yet. Find it in the catalog and install it from there to link it.</p>`:""}
+ <div class="acts">${loose?`<button class="btn" data-a="find">Find in catalog</button>`:`<button class="btn" data-a="install">${a.update?"Update":"Reinstall"}</button><button class="btn quiet" data-a="info">Screenshots and details</button>`}
+ ${a.can_rollback?`<button class="btn quiet" data-a="rollback">Restore previous version</button>`:""}<button class="btn danger" data-a="remove">Remove</button><button class="btn quiet" data-a="close">Close</button></div>`;
+ $("#page").classList.add("on")}
+function closePage(){sel=null;$("#page").classList.remove("on");$$(".spine.sel").forEach(s=>s.classList.remove("sel"))}
+async function act(route,key,done){const sp=$(`.spine[data-k="${CSS.escape(key)}"]`);sp&&sp.classList.add("busy");
+ try{S=await api(route,{key});if(route=="remove")closePage();draw();toast(done);return true}catch(e){toast(e.message,1)}finally{sp&&sp.classList.remove("busy")}}
+$("#shelf").onclick=e=>{const s=e.target.closest(".spine");if(s)s.dataset.k==sel?closePage():openPage(s.dataset.k)};
+$("#list").onclick=e=>{const u=e.target.closest("[data-up]"),r=e.target.closest("tr[data-k]");if(u){const a=S.addons.find(x=>x.key==u.dataset.up);u.disabled=true;act("install",a.key,`Updated ${a.name}`)}else if(r)openPage(r.dataset.k)};
+$("#hints").onclick=e=>e.target.dataset.go&&show(e.target.dataset.go);
+$("#filter").oninput=()=>draw();$(".seg").onclick=e=>{if(e.target.dataset.view){view=localStorage.view=e.target.dataset.view;draw()}};
+$("#page").onclick=e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=S.addons.find(x=>x.key==sel),x=b.dataset.a;
+ if(x=="close")closePage();else if(x=="find"){show("cat");$("#q").value=a.name.replace(/\s*[-–(\[].*$/,"");find()}else if(x=="info")info(a.key)
+ else if(x=="install")act("install",a.key,`${a.update?"Updated":"Reinstalled"} ${a.name}`);else if(x=="rollback")act("rollback",a.key,`Restored the previous version of ${a.name}`);
+ else if(x=="remove"){if(b.dataset.sure)act("remove",a.key,`Removed ${a.name}. A copy is kept in case you want it back.`);else{b.dataset.sure=1;b.textContent="Click again to remove"}}};
+$("#chk").onclick=async e=>{e.target.disabled=true;e.target.textContent="Checking…";try{S=await api("check");draw();const u=S.addons.filter(a=>a.update).length;toast(u?`${u} addons have a newer version`:"Everything linked is up to date")}catch(x){toast(x.message,1)}e.target.disabled=false;e.target.textContent="Check for updates"};
+$("#upall").onclick=async e=>{e.target.disabled=true;$$(".spine").forEach(s=>s.querySelector(".mark")&&s.classList.add("busy"));
+ try{const r=await api("update_all",{});S=r;draw();const f=Object.entries(r.failed||{});toast(f.length?"Could not update "+f.map(([n,m])=>n+": "+m).join("; "):"Updated everything",f.length)}catch(x){toast(x.message,1);draw()}e.target.disabled=false};
+function show(v){$$("section").forEach(s=>s.classList.toggle("on",s.id==v));$$("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v==v));if(v!="lib")closePage();if(v=="cat"&&!R.length)find()}
+$("nav").onclick=e=>{const b=e.target.closest("[data-v]");b&&show(b.dataset.v)};
+/* catalog */
+async function find(){$("#results").innerHTML=`<div class="grid">${'<div class="skel"></div>'.repeat(8)}</div>`;$("#catnote").innerHTML="";
+ try{const r=await api("search?q="+encodeURIComponent($("#q").value));R=r.results;srcOn="All";
+  $("#catnote").innerHTML=r.errors.map(m=>`<p class="hint"><span>${esc(m)}</span>${/key/.test(m)?'<button class="btn sm" data-go="set">Open Settings</button>':""}</p>`).join("");paint()}
+ catch(e){$("#results").innerHTML=`<p class="empty">${esc(e.message)}</p>`}}
+function card(x){return `<button class="card" data-k="${esc(x.key)}">${x.thumb?`<img src="${esc(x.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=ph>${esc(x.name[0])}</div>'">`:`<div class="ph">${esc(x.name[0])}</div>`}
+ <h4>${esc(x.name)}</h4><p>${esc(x.summary||"by "+x.author)}</p>
+ <span class="meta"><span class="src ${x.source}">${x.source}</span><span>${compact.format(x.downloads)} ${x.stars?"stars":"downloads"}</span>${x.updated?`<span>Updated ${ago(x.updated)}</span>`:""}${x.version?`<span>${esc(x.version.slice(0,28))}</span>`:""}
+ <span class="btn sm" role="button" data-i="${esc(x.key)}" ${x.installed?'aria-disabled="true" style="filter:grayscale(.7);opacity:.6"':""}>${x.installed?"On the shelf":"Install"}</span></span></button>`}
+function paint(){const counts={All:R.length};R.forEach(r=>counts[r.source]=(counts[r.source]||0)+1);
+ $("#srcs").innerHTML=Object.entries(counts).map(([s,n])=>`<button aria-pressed="${s==srcOn}" data-s="${s}">${s=="All"?"All sources":s}<small>${n}</small></button>`).join("");
+ const rows=R.filter(r=>srcOn=="All"||r.source==srcOn),mode=$("#sort").value,pop=(a,b)=>b.downloads-a.downloads;
+ if(!rows.length){$("#results").innerHTML=`<p class="empty">Nothing matches. Try a shorter search, or paste the addon’s GitHub link.</p>`;return}
+ if(mode=="cat"){const g={};rows.forEach(r=>(g[r.category]??=[]).push(r));
+  $("#results").innerHTML=Object.entries(g).sort((a,b)=>b[1].reduce((s,r)=>s+r.downloads,0)-a[1].reduce((s,r)=>s+r.downloads,0)).map(([c,l])=>`<h3 class="group">${esc(c)}<small>${l.length}</small></h3><div class="grid">${l.sort(pop).map(card).join("")}</div>`).join("")}
+ else $("#results").innerHTML=`<div class="grid">${rows.sort(mode=="pop"?pop:mode=="new"?(a,b)=>b.updated-a.updated:(a,b)=>a.name.localeCompare(b.name)).map(card).join("")}</div>`}
+$("#go").onclick=find;$("#q").onkeydown=e=>e.key=="Enter"&&find();$("#sort").onchange=paint;$("#catnote").onclick=e=>e.target.dataset.go&&show(e.target.dataset.go);
+$("#srcs").onclick=e=>{const b=e.target.closest("[data-s]");if(b){srcOn=b.dataset.s;paint()}};
+async function install(key,name,btn){if(btn){btn.textContent="Installing…";btn.setAttribute("aria-disabled","true")}
+ try{S=await api("install",{key});const r=R.find(x=>x.key==key);if(r)r.installed=true;draw();paint();toast(`Installed ${name}`);return true}catch(x){toast(x.message,1);if(btn){btn.textContent="Install";btn.removeAttribute("aria-disabled")}}}
+$("#results").onclick=e=>{const i=e.target.closest("[data-i]"),c=e.target.closest(".card");if(i){e.stopPropagation();if(!i.hasAttribute("aria-disabled")){const r=R.find(x=>x.key==i.dataset.i);install(r.key,r.name,i)}}else if(c)info(c.dataset.k)};
+/* details dialog */
+function shot(i){si=(i+shots.length)%shots.length;$("#big").src=shots[si];$$(".thumbs img").forEach((t,j)=>t.classList.toggle("on",j==si))}
+async function info(key){const d=$("#dlg");d.innerHTML=`<div class="dbody"><p class="empty" style="color:var(--muted)">Fetching details…</p></div>`;d.showModal();
+ let x;try{x=await api("details?key="+encodeURIComponent(key))}catch(e){d.innerHTML=`<div class="dbody"><p class="warn">${esc(e.message)}</p></div><div class="dfoot"><span></span><button class="btn quiet" data-d="close">Close</button></div>`;return}
+ shots=x.shots||[];
+ d.innerHTML=`<div class="dhead">${x.thumb?`<img src="${esc(x.thumb)}" alt="">`:""}<div><h2>${esc(x.name)}</h2><p class="by" style="margin:0">by ${esc(x.author)}${x.summary?" — "+esc(x.summary):""}</p>
+  <p class="stats"><span class="src ${x.source}">${x.source}</span><span><b>${Number(x.downloads).toLocaleString()}</b> ${x.stars?"stars":"downloads"}</span>${x.updated?`<span>Updated <b>${ago(x.updated)}</b></span>`:""}${x.version?`<span>Version <b>${esc(x.version)}</b></span>`:""}<span>${esc(x.category)}</span></p></div><button class="x" data-d="close" aria-label="Close">×</button></div>
+ <div class="dbody">${shots.length?`<div class="shot"><img id="big" alt="Screenshot of ${esc(x.name)}">${shots.length>1?'<button class="p" data-d="prev" aria-label="Previous screenshot">‹</button><button class="n" data-d="next" aria-label="Next screenshot">›</button>':""}</div>${shots.length>1?`<div class="thumbs">${shots.map((s,i)=>`<img src="${esc(s)}" data-t="${i}" alt="" loading="lazy">`).join("")}</div>`:""}`:""}
+  <iframe id="desc" sandbox="allow-popups allow-popups-to-escape-sandbox" title="Description"></iframe></div>
+ <div class="dfoot"><span>${shots.length?shots.length+" screenshots":"No screenshots published"}</span>${x.page?`<a class="btn quiet" href="${esc(x.page)}" target="_blank" rel="noopener">Open on ${x.source}</a>`:""}<button class="btn" data-d="install" ${x.installed?"disabled":""}>${x.installed?"On the shelf":"Install"}</button></div>`;
+ d.dataset.key=x.key;d.dataset.name=x.name;if(shots.length)shot(0);
+ // the source's own HTML is shown in a script-less sandbox
+ $("#desc").srcdoc=`<base target="_blank"><style>body{font:16px/1.55 Georgia,serif;color:#1c120c;margin:0;overflow-wrap:anywhere}img,video,iframe{max-width:100%;height:auto}a{color:#8a2f18}pre,code{white-space:pre-wrap;background:#0001;padding:2px 4px}h1,h2,h3{font-weight:400;line-height:1.2}table{border-collapse:collapse}td,th{border:1px solid #b9a577;padding:4px 8px}</style>${x.html||"<p><i>The source has no description for this addon.</i></p>"}`;
+ $("#desc").onload=e=>{try{e.target.style.height=Math.min(4000,e.target.contentDocument.documentElement.scrollHeight+20)+"px"}catch{e.target.style.height="600px"}}}
+$("#dlg").onclick=async e=>{const d=$("#dlg"),a=e.target.dataset.d;if(e.target==d||a=="close")d.close();else if(a=="prev")shot(si-1);else if(a=="next")shot(si+1);else if(e.target.dataset.t)shot(+e.target.dataset.t);else if(e.target.id=="big")open(shots[si],"_blank","noopener");
+ else if(a=="install"){e.target.disabled=true;e.target.textContent="Installing…";if(await install(d.dataset.key,d.dataset.name))e.target.textContent="On the shelf";else{e.target.disabled=false;e.target.textContent="Install"}}};
+$("#dlg").onkeydown=e=>{if(shots.length>1){if(e.key=="ArrowLeft")shot(si-1);if(e.key=="ArrowRight")shot(si+1)}};
+$("#savekey").onclick=async()=>{const k=$("#key").value.trim();if(!k)return toast("Paste the key first",1);try{await api("key",{key:k});$("#key").value="";S=await api("state");R=[];draw();toast("Key saved")}catch(e){toast(e.message,1)}};
+$("#scan").onclick=async()=>{try{const r=await api("downloads");$("#files").innerHTML=r.files.length?`<table class="tbl" style="margin-bottom:20px"><tbody>${r.files.map(f=>`<tr><td>${esc(f.name)}</td><td>${mb(f.size)}</td><td>${ago(f.when)}</td><td><button class="btn sm" data-f="${esc(f.path)}">Install</button></td></tr>`).join("")}</tbody></table>`:`<p>No .zip files in Downloads.</p>`}catch(e){toast(e.message,1)}};
+$("#files").onclick=async e=>{const b=e.target.closest("[data-f]");if(!b)return;b.disabled=true;try{const r=await api("install_file",{path:b.dataset.f});S=r;draw();b.textContent="Installed";toast(`Installed ${r.installed}`)}catch(x){b.disabled=false;toast(x.message,1)}};
+setInterval(()=>api("ping").catch(()=>{}),30000);
+api("state").then(s=>{S=s;const h=decodeURIComponent(location.hash.slice(1));show(h=="cat"?"cat":"lib");draw(true);if(h.startsWith("info="))info(h.slice(5));else if(h&&h!="cat")openPage(h)}).catch(e=>toast(e.message,1));
+(()=>{if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;const c=$("#embers"),x=c.getContext("2d");let P=[];
+ const size=()=>{c.width=innerWidth;c.height=innerHeight};size();onresize=size;
+ const mk=()=>({x:Math.random()*c.width,y:c.height+10,v:.25+Math.random()*.6,r:.6+Math.random()*1.6,d:Math.random()*6.28,l:1});
+ (function tick(){x.clearRect(0,0,c.width,c.height);if(P.length<40&&Math.random()<.15)P.push(mk());
+  P=P.filter(p=>p.l>0&&p.y>-10);for(const p of P){p.y-=p.v;p.d+=.02;p.x+=Math.sin(p.d)*.35;p.l-=.0016;x.globalAlpha=p.l*.8;x.fillStyle="#ffb169";x.beginPath();x.arc(p.x,p.y,p.r,0,6.28);x.fill()}
+  requestAnimationFrame(tick)})()})();
+</script></body></html>
