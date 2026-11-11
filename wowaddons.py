@@ -132,7 +132,7 @@ def read_toc(folder):
         for line in tocs[0].read_text(encoding="utf-8-sig", errors="ignore").splitlines():
             m = re.match(r"##\s*([^:]+?)\s*:\s*(.*)", line)
             if m:
-                out.setdefault(m.group(1).lower(), re.sub(r"\|c[0-9a-fA-F]{8}|\|r|\|T[^|]*\|t", "", m.group(2)).strip())
+                out.setdefault(m.group(1).lower(), re.sub(r"\s+", " ", re.sub(r"\|c[0-9a-fA-F]{8}|\|r|\|T[^|]*\|t", "", m.group(2)).replace("|n", " ")).strip())
     if out.get("title"):                            # "Questie v12.6.5" -> "Questie": the version has its own field
         out["title"] = re.sub(r"\s+v?\d+(\.\d+)+\S*$", "", out["title"]).strip() or out["title"]
     return out
@@ -752,6 +752,64 @@ def install_zip(z, source=None):
     return st["addons"][key]["name"]
 
 
+# ---------- an addon's saved settings (the game's SavedVariables files, named after the addon's folders) ----------
+SETTINGS = BACKUPS.parent / "settings"
+
+
+def wtf():
+    return addons_dir().parent.parent / "WTF" / "Account"
+
+
+def settings_files(a):
+    """Every settings file the game keeps for this addon: per account and per character, with the game's .bak copies."""
+    out = []
+    for f in a["folders"]:
+        for pat in (f"*/SavedVariables/{f}.lua*", f"*/*/*/SavedVariables/{f}.lua*"):
+            out += [p for p in wtf().glob(pat) if p.is_file()]
+    return sorted(set(out))
+
+
+def settings_slots(key):
+    return [d for d in sorted((SETTINGS / re.sub(r"[^\w.-]", "_", key)).glob("*")) if d.is_dir() and any(d.rglob("*.lua*"))]
+
+
+def reset_settings(key):
+    """Set the addon's saved settings aside so it starts as if freshly installed. Returns how many files were moved."""
+    if wow_running():
+        raise RuntimeError("Close World of Warcraft first: it writes addon settings back when it exits")
+    with LOCK:
+        files = settings_files(load()["addons"][key])
+        if not files:
+            raise RuntimeError("This addon has no saved settings yet")
+        home = SETTINGS / re.sub(r"[^\w.-]", "_", key)
+        slot = home / time.strftime("%Y%m%d-%H%M%S")
+        for f in files:
+            dest = slot / f.relative_to(wtf())                  # same layout as the game's folder, so it can go straight back
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(f, dest)
+        for old in settings_slots(key)[:-3]:                    # keep the three most recent resets
+            shutil.rmtree(old)
+    return len(files)
+
+
+def restore_settings(key):
+    """Undo the last reset: put the saved settings back (replacing any the addon has written since)."""
+    if wow_running():
+        raise RuntimeError("Close World of Warcraft first: it writes addon settings back when it exits")
+    with LOCK:
+        slots = settings_slots(key)
+        if not slots:
+            raise RuntimeError("There are no set-aside settings for this addon")
+        slot, n = slots[-1], 0
+        for f in [p for p in slot.rglob("*") if p.is_file()]:
+            dest = wtf() / f.relative_to(slot)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(f, dest)                                # replaces a newer file of the same name
+            n += 1
+        shutil.rmtree(slot)
+    return n
+
+
 def remove(key):
     if wow_running():
         raise RuntimeError("Close World of Warcraft first")
@@ -830,11 +888,16 @@ def check():
 def view(st=None):
     st = st or sync()
     names = shelf_categories()
+    saved = {}                                          # one pass over the game's settings folders for all addons
+    for pat in ("*/SavedVariables/*.lua*", "*/*/*/SavedVariables/*.lua*"):
+        for f in wtf().glob(pat):
+            saved[f.name.split(".lua")[0]] = saved.get(f.name.split(".lua")[0], 0) + 1
     rows = [{"key": k, "source": {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "No source"}[k.split(":")[0]],
              "size": folder_size(a["folders"]), "notes": toc(primary(a)).get("notes", ""),
              "category": a.get("category") or SRC_CAT.get(k) or guess_category(toc(primary(a)), a["name"]),
              "icon": memo("icon", primary(a), lambda k=k: bool(icon_png(k))), "art": SRC_ART.get(k, ""),
-             "can_rollback": bool(saved_versions(k)), **a, **LIVE.get(k, {})}
+             "can_rollback": bool(saved_versions(k)), "settings": sum(saved.get(f, 0) for f in a["folders"]),
+             "settings_saved": bool(settings_slots(k)), **a, **LIVE.get(k, {})}
             for k, a in st["addons"].items()]
     rows.sort(key=lambda r: r["name"].lower())
     fresh = [d for d in downloads() if time.time() - d["when"] < 1800 and d["size"] > 0
@@ -907,6 +970,9 @@ class H(BaseHTTPRequestHandler):
                 r = {"restarting": bool(RESTART)}
                 if RESTART:
                     threading.Timer(1.2, RESTART).start()       # after this reply has reached the window
+            elif route in ("reset_settings", "restore_settings"):
+                n = {"reset_settings": reset_settings, "restore_settings": restore_settings}[route](body["key"])
+                r = {**view(), "files": n}
             elif route in ("install", "remove", "rollback"):
                 {"install": install, "remove": remove, "rollback": rollback}[route](body["key"])
                 r = view()
