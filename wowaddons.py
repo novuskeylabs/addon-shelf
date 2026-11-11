@@ -57,7 +57,9 @@ def save(st):
 def http(url, headers=None, raw=False):
     req = urllib.request.Request(url, headers={"User-Agent": UA, **(headers or {})})
     with urllib.request.urlopen(req, timeout=40) as r:
-        data = r.read()
+        data = r.read(MAX_ZIP + 1)          # never buffer more than the cap
+    if len(data) > MAX_ZIP:
+        raise RuntimeError("Download is unexpectedly large")
     return data if raw else json.loads(data)
 
 
@@ -307,8 +309,10 @@ def search(q):
 def unpack(zpath, dest):
     """Extract into dest and return the addon folders (each has a .toc named after it)."""
     with zipfile.ZipFile(zpath) as z:
-        root = dest.resolve()
-        for m in z.infolist():
+        root, members = dest.resolve(), z.infolist()
+        if len(members) > 200_000 or sum(m.file_size for m in members) > 2 * MAX_ZIP:
+            raise RuntimeError("Archive is unreasonably large when unpacked")
+        for m in members:
             target = (dest / m.filename).resolve()
             if not target.is_relative_to(root) or m.external_attr >> 28 == 0xA:
                 raise RuntimeError("Archive has an unsafe path: " + m.filename)
@@ -350,8 +354,6 @@ def install(key):
     with tempfile.TemporaryDirectory(dir=CACHE) as tmp:
         zpath = Path(tmp) / "a.zip"
         data = http(new["url"], raw=True)
-        if len(data) > MAX_ZIP:
-            raise RuntimeError("Download is unexpectedly large")
         zpath.write_bytes(data)
         found = unpack(zpath, Path(tmp) / "x")
         names = [d.name for d in found]
