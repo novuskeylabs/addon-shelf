@@ -309,6 +309,7 @@ function draw(first){
  const n=S.addons.length,u=S.addons.filter(a=>a.update).length,loose=S.addons.filter(a=>a.source=="No source").length,f=$("#filter").value.toLowerCase();
  document.body.classList.toggle("locked",!!S.wow_running);$("#chk").title=checked?"Last checked "+ago2(checked):"";
  $("#status").textContent=S.wow_running?"World of Warcraft is running: changes are locked":"World of Warcraft is closed: safe to make changes";$("#status").className=S.wow_running?"locked":"";
+ document.title=(u?`${u} update${u>1?"s":""} available - `:"")+"The Addon Shelf for WoW Forever";
  const auto=S.addons.filter(a=>a.update&&!a.restricted).length;$("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!auto;$("#upall").textContent=`Update all ${auto}`;
  $("#hints").innerHTML=(S.has_cf_key?"":`<p class="hint"><span>CurseForge is not connected, so ${S.addons.filter(a=>a.source=="CurseForge").length} of your addons cannot be checked for updates.</span><button class="btn sm" data-go="set">Connect CurseForge</button></p>`)
   +(S.new_downloads||[]).filter(d=>!seen.has(d.path)).map(d=>`<p class="hint"><span>New download: <b>${esc(d.name)}</b> (${mb(d.size)}, ${ago(d.when)})</span><button class="btn sm" data-f="${esc(d.path)}">Install it</button><button class="btn sm quiet" data-x="${esc(d.path)}">Not an addon</button></p>`).join("")

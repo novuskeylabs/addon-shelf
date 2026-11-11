@@ -1222,7 +1222,8 @@ def main():
         from PySide6.QtGui import QDesktopServices, QIcon
         from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
         from PySide6.QtWebEngineWidgets import QWebEngineView
-        from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout
+        from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMenu, QMessageBox, QPushButton,
+                                       QSystemTrayIcon, QVBoxLayout)
     except ImportError as e:
         sys.exit(f"The Addon Shelf needs PySide6 with Qt WebEngine to show its window ({e}). On Arch: sudo pacman -S pyside6 qt6-webengine")
     CONF.mkdir(parents=True, exist_ok=True)
@@ -1344,9 +1345,43 @@ def main():
 
     global FETCH, RESTART
     FETCH, RESTART = fetch, fetcher.again.emit
+
+    # system tray: a way back to the window, a quick update check, and quit. Closing the window still quits the app.
+    tray = None
+    if QSystemTrayIcon.isSystemTrayAvailable():
+        def raise_window():
+            view.show()
+            view.raise_()
+            view.activateWindow()
+
+        def toggle(reason):
+            if reason == QSystemTrayIcon.Trigger:                   # a plain click on the icon
+                view.hide() if view.isVisible() and view.isActiveWindow() else raise_window()
+
+        def check_now():
+            raise_window()
+            view.page().runJavaScript("show('lib');document.querySelector('#chk').click()")
+
+        tray = QSystemTrayIcon(QIcon(str(HERE / "icon.svg")), app)
+        menu = QMenu()
+        menu.addAction("Open The Addon Shelf", raise_window)
+        menu.addAction("Check for updates", check_now)
+        menu.addSeparator()
+        menu.addAction("Quit", app.quit)
+        tray.setContextMenu(menu)
+        tray.setToolTip("The Addon Shelf for WoW Forever")
+        tray.activated.connect(toggle)
+        tray.show()
+
+    def titled(title):                                              # the page puts the update count in its title
+        view.setWindowTitle(title or "The Addon Shelf for WoW Forever")
+        if tray:
+            tray.setToolTip(title or "The Addon Shelf for WoW Forever")
+    view.titleChanged.connect(titled)
     shot = os.environ.get("WOWADDONS_SHOT")                     # debugging aid: save a picture of the window, then quit
     if shot:
-        QTimer.singleShot(7000, lambda: (view.grab().save(shot), app.quit()))
+        print("tray icon shown:", bool(tray and tray.isVisible()), "| tooltip:", tray.toolTip() if tray else "", flush=True) if os.environ.get("WOWADDONS_TRAYINFO") else None
+        QTimer.singleShot(7000, lambda: (os.environ.get("WOWADDONS_TRAYINFO") and print("tray tooltip later:", tray.toolTip() if tray else "", flush=True), view.grab().save(shot), app.quit()))
     sys.exit(app.exec())
 
 
