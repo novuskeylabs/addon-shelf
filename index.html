@@ -85,7 +85,7 @@ h3.group small{font:15px Alegreya,serif;color:#bcd0c8}
 .empty{text-align:center;padding:50px 20px;color:#bcd0c8;font-size:19px}
 /* details dialog */
 dialog{border:0;padding:0;width:min(1000px,94vw);max-height:90vh;border-radius:6px 22px 6px 22px;background:var(--grain),var(--vellum);color:var(--ink);box-shadow:0 0 0 2px var(--brass),0 30px 80px #000c;overflow:hidden}
-dialog[open]{display:flex;flex-direction:column;animation:pop .25s cubic-bezier(.3,1.3,.5,1)}@keyframes pop{from{transform:scale(.94);opacity:0}}
+dialog[open]{min-height:min(640px,86vh);display:flex;flex-direction:column;animation:pop .25s cubic-bezier(.3,1.3,.5,1)}@keyframes pop{from{transform:scale(.94);opacity:0}}
 dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
 .dhead{display:flex;gap:18px;padding:22px 26px 16px;align-items:flex-start;border-bottom:1px solid #b9a577}
 .dhead img{width:84px;height:84px;border-radius:8px;object-fit:cover;background:var(--oak2)}.dhead div{flex:1;min-width:0}
@@ -103,9 +103,38 @@ dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
 #toast.on{transform:translate(-50%,0)}#toast.bad{border-color:var(--ember);color:#ffd9c7}
 @media (max-width:860px){aside.on{position:absolute;inset:0;width:100%;z-index:5}aside>div{width:100%}header{flex-wrap:wrap;gap:4px 14px}#status{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}#embers{display:none}}
+
+/* --- polish pass --- */
+section.on{animation:fade .22s ease}@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#c9a04f55;border-radius:9px;border:3px solid #0000;background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background:#c9a04faa;background-clip:padding-box}
+h1{display:flex;align-items:center;gap:12px}h1 svg{width:36px;height:36px;filter:drop-shadow(0 2px 2px #0008)}
+#prog{position:fixed;top:0;left:0;right:0;height:3px;z-index:100;background:linear-gradient(90deg,#0000,var(--brass2),var(--ember),#0000);background-size:50% 100%;background-repeat:no-repeat;opacity:0;transition:opacity .2s}
+#prog.on{opacity:1;animation:slide 1.1s linear infinite}@keyframes slide{from{background-position:-50% 0}to{background-position:150% 0}}
+#shelf{padding:0 22px 26px;border-left:12px solid #4a2f1c;border-right:12px solid #4a2f1c;border-radius:6px;
+ background:repeating-linear-gradient(to bottom,#0000 0 262px,#a57a4f 262px 264px,#80583a 264px 280px,#3a2415 280px 288px),linear-gradient(90deg,#0006,#0000 8%,#0000 92%,#0006),repeating-linear-gradient(to bottom,#0b1a17aa 0 262px,#0000 262px 288px);
+ box-shadow:inset 0 0 0 1px #0006,0 10px 30px #0006}
+.spine{box-shadow:inset 0 0 0 1px #0007,inset 3px 0 6px #fff1,3px 0 6px #0008}
+.spine span{background:linear-gradient(180deg,#fff3c9,#d9b25c);-webkit-background-clip:text;background-clip:text;color:#0000;text-shadow:none;filter:drop-shadow(0 1px 0 #0009);letter-spacing:.02em}
+.spine.loose span{background:none;color:#2a2118;filter:none}
+.spine.o1::before,.spine.o1::after{height:3px;box-shadow:0 6px 0 var(--brass),0 1px 0 #0006}
+.spine span{font-size:var(--f,17px)}.spine.o2 span{inset:34px 0 60px}
+.spine.o2 i{position:absolute;left:50%;bottom:36px;width:13px;height:13px;margin-left:-6.5px;transform:rotate(45deg);border:2px solid var(--brass2);box-shadow:inset 0 0 0 2px #0004}
+.spine.loose i{border-color:#5d5442}
+.spine:hover,.spine.sel{transform:translateY(-16px) rotate(-.6deg)}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--vellum);border:1px solid var(--brass);border-radius:8px;padding:8px 14px;font-size:15.5px;line-height:1.35;max-width:300px;box-shadow:0 8px 24px #000a;opacity:0;transform:translateY(6px);transition:opacity .12s,transform .12s}
+#tip.on{opacity:1;transform:none}#tip b{font:400 19px "IM Fell English",serif;display:block;color:#fff3d6}#tip em{color:#ffb38a;font-style:normal}
+aside h2{display:flex;gap:12px;align-items:flex-start}aside h2::before{content:"";flex:none;width:12px;height:34px;border-radius:2px;background:var(--pc,#6e2a22);box-shadow:inset 0 0 0 1px #0005}
+.badge{display:inline-block;font-size:14.5px;padding:1px 10px;border-radius:99px;background:#2f5131;color:#eaf6e4;margin-bottom:10px}.badge.new{background:var(--ember);color:#fff}.badge.loose{background:#8d8168;color:#1c120c}
+kbd{font:14px Alegreya,serif;border:1px solid #c9a04f88;border-bottom-width:2px;border-radius:4px;padding:0 6px;margin:0 2px}
+.card{height:100%;position:relative;grid-template-rows:auto 1fr auto}.card .meta{margin-top:auto}
+.card.have::after{content:"On your shelf";position:absolute;top:10px;right:-6px;background:#2f5131;color:#eaf6e4;font-size:13px;padding:1px 10px;border-radius:3px 0 0 3px;box-shadow:0 2px 0 #0004}
+.tabs{display:flex;gap:6px;margin:16px 0 0;border-bottom:1px solid #b9a577}.tabs button{background:none;border:0;border-bottom:3px solid #0000;padding:6px 14px;cursor:pointer;color:var(--muted);font-weight:500}.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--ember)}
+#drop{position:fixed;inset:14px;z-index:90;border:3px dashed var(--brass2);border-radius:18px;background:#0b0705dd;display:none;place-items:center;text-align:center;font:400 34px "IM Fell English",serif;color:#fff3d6}
+#drop.on{display:grid}#drop small{display:block;font:18px Alegreya,serif;color:var(--vellum2);margin-top:8px}
+#toast{display:flex;gap:10px;align-items:center;box-shadow:0 10px 30px #000a}#toast::before{content:"✓";color:#8fd49a;font-weight:700}#toast.bad::before{content:"!";color:var(--ember)}
 </style></head><body>
-<canvas id="embers"></canvas>
-<header><h1>The Addon <i>Shelf</i></h1><p id="status"></p>
+<canvas id="embers"></canvas><div id="prog"></div><div id="tip"></div><div id="drop"><div>Drop the addon’s .zip to install it<small>An addon already on your shelf is updated in place and keeps a backup</small></div></div>
+<header><h1><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="50" width="48" height="6" rx="1" fill="#80583a"/><rect x="13" y="16" width="10" height="34" rx="1" fill="#6e2a22"/><rect x="25" y="10" width="12" height="40" rx="1" fill="#27405c"/><rect x="39" y="20" width="11" height="30" rx="1" fill="#7a4a1c"/><g fill="#f0cd7c"><rect x="13" y="21" width="10" height="3"/><rect x="25" y="16" width="12" height="3"/><rect x="39" y="25" width="11" height="3"/><rect x="13" y="42" width="10" height="3"/><rect x="25" y="42" width="12" height="3"/><rect x="39" y="42" width="11" height="3"/></g><path d="M29 4h4v12l-2-2-2 2z" fill="#e0672f"/></svg><span>The Addon <i>Shelf</i></span></h1><p id="status"></p>
 <nav role="tablist"><button role="tab" data-v="lib" aria-selected="true">My addons<b id="badge" hidden></b></button><button role="tab" data-v="cat">Catalog</button><button role="tab" data-v="set">Settings</button></nav></header>
 <main>
 <section id="lib">
@@ -125,14 +154,18 @@ dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
  <p id="keystate"></p>
  <h2 style="color:#fff3d6;margin-top:34px">Install from a file you downloaded</h2>
  <p>Works without any key: download an addon’s .zip in your browser, then pick it here. If the addon is already on your shelf it is updated in place.</p>
- <div class="bar"><button class="btn quiet" id="scan">Look in my Downloads folder</button></div><div id="files"></div><p id="dir"></p></section>
+ <div class="bar"><button class="btn quiet" id="scan">Look in my Downloads folder</button></div><div id="files"></div><p id="dir"></p>
+ <h2 style="color:#fff3d6;margin-top:34px">Shortcuts</h2><p><kbd>/</kbd> search &nbsp; <kbd>Esc</kbd> close a page or dialog &nbsp; <kbd>←</kbd><kbd>→</kbd> flip through screenshots. You can also drop a .zip anywhere on the window.</p></section>
 <aside id="page"><div></div></aside>
 </main>
 <dialog id="dlg"></dialog><div id="toast" role="status"></div>
 <script>
 const T="__TOKEN__",$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const seen=new Set(JSON.parse(sessionStorage.seen||"[]")),markSeen=p=>{seen.add(p);sessionStorage.seen=JSON.stringify([...seen])};
 let S={addons:[]},sel=null,view=localStorage.view||"shelf",R=[],srcOn="All",shots=[],si=0;
-async function api(p,body){const r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw new Error(j.error||"Something went wrong");return j}
+let busy=0;const prog=d=>{busy+=d;$("#prog").classList.toggle("on",busy>0)};
+async function api(p,body){if(p!="ping")prog(1);try{return await api0(p,body)}finally{if(p!="ping")prog(-1)}}
+async function api0(p,body){const r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw new Error(j.error||"Something went wrong");return j}
 function toast(m,bad){const t=$("#toast");t.textContent=m;t.className="on"+(bad?" bad":"");clearTimeout(toast.t);toast.t=setTimeout(()=>t.className="",bad?8000:3200)}
 const hash=s=>[...s].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7),LEATHER=["#6e2a22","#27405c","#2f5131","#5a3a1e","#4c2c52","#7a4a1c","#1f4a4a","#5c2338"];
 const mb=n=>n>1<<30?(n/2**30).toFixed(1)+" GB":Math.max(1,Math.round(n/2**20))+" MB",compact=new Intl.NumberFormat("en",{notation:"compact",maximumFractionDigits:1});
@@ -143,16 +176,18 @@ function draw(first){
  $("#status").textContent=S.wow_running?"World of Warcraft is running: changes are locked":"World of Warcraft is closed: safe to make changes";$("#status").className=S.wow_running?"locked":"";
  $("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!u;$("#upall").textContent=`Update all ${u}`;
  $("#hints").innerHTML=(S.has_cf_key?"":`<p class="hint"><span>CurseForge is not connected, so ${S.addons.filter(a=>a.source=="CurseForge").length} of your addons cannot be checked for updates.</span><button class="btn sm" data-go="set">Connect CurseForge</button></p>`)
+  +(S.new_downloads||[]).filter(d=>!seen.has(d.path)).map(d=>`<p class="hint"><span>New download: <b>${esc(d.name)}</b> (${mb(d.size)}, ${ago(d.when)})</span><button class="btn sm" data-f="${esc(d.path)}">Install it</button><button class="btn sm quiet" data-x="${esc(d.path)}">Not an addon</button></p>`).join("")
   +(loose?`<p class="hint"><span>${loose} addons were added by hand and have no source to update from. Open one and choose “Find in catalog” to link it.</span></p>`:"");
  $("#legend").innerHTML=`<span>${n} addons</span><span><i style="background:#6e2a22"></i>Linked to a source</span><span><i style="background:#93876d"></i>Added by hand</span><span><i style="background:var(--ember)"></i>Newer version available</span>`;
  $("#shelf").hidden=view!="shelf";$("#list").hidden=view!="list";$$(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view==view));
  $("#shelf").innerHTML=S.addons.map((a,i)=>{const h=hash(a.key),w=Math.round(38+Math.min(44,Math.log2(1+a.size/2**20)*5));
-  return `<button class="spine${a.source=="Unlinked"?" loose":""}${a.key==sel?" sel":""}${f&&!a.name.toLowerCase().includes(f)?" dim":""}" data-k="${esc(a.key)}" title="${esc(a.name)} ${esc(a.version)}${a.update?" (newer version available)":""}" style="--h:${196+h%58}px;--w:${w}px;--c:${color(a)};--i:${first?i:0}">${a.update?'<b class="mark"></b>':""}<span>${esc(a.name)}</span></button>`}).join("");
+  return `<button class="spine o${h%3}${a.source=="Unlinked"?" loose":""}${a.key==sel?" sel":""}${f&&!a.name.toLowerCase().includes(f)?" dim":""}" data-k="${esc(a.key)}" aria-label="${esc(a.name)}" style="--h:${196+h%58}px;--w:${w}px;--c:${color(a)};--i:${first?i:0};--f:${a.name.length>22?13:a.name.length>16?15:17}px">${a.update?'<b class="mark"></b>':""}<span>${esc(a.name)}</span><i></i></button>`}).join("");
  $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source=="Unlinked"?"Added by hand":a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
  $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent="Addon folder: "+(S.addons_dir||"");
  if(sel)openPage(sel)}
 function openPage(k){const a=S.addons.find(x=>x.key==k);if(!a){closePage();return}sel=k;$$(".spine").forEach(s=>s.classList.toggle("sel",s.dataset.k==k));const loose=a.source=="Unlinked";
- $("#page>div").innerHTML=`<h2>${esc(a.name)}</h2><p class="by">${esc(a.notes||"No description in the addon.")}</p>
+ $("#page").style.setProperty("--pc",color(a));
+ $("#page>div").innerHTML=`<span class="badge ${a.update?"new":loose?"loose":""}">${a.update?"Newer version available":loose?"Added by hand":a.latest?"Up to date":"Linked to "+esc(a.source)}</span><h2>${esc(a.name)}</h2><p class="by">${esc(a.notes||"No description in the addon.")}</p>
  <dl><dt>Installed</dt><dd>${esc(a.version||"unknown")}</dd>${a.latest?`<dt>Newest</dt><dd>${esc(a.latest)}</dd>`:""}<dt>Source</dt><dd>${esc(loose?"Added by hand":a.source)}</dd><dt>Size</dt><dd>${mb(a.size)}</dd><dt>Folders</dt><dd>${a.folders.length>3?a.folders.length+" folders, starting with "+esc(a.folders[0]):a.folders.map(esc).join(", ")}</dd></dl>
  ${a.error?`<p class="warn">${esc(a.error)}</p>`:""}${loose?`<p>There is nowhere to check this addon for updates yet. Find it in the catalog and install it from there to link it.</p>`:""}
  <div class="acts">${loose?`<button class="btn" data-a="find">Find in catalog</button>`:`<button class="btn" data-a="install">${a.update?"Update":"Reinstall"}</button><button class="btn quiet" data-a="info">Screenshots and details</button>`}
@@ -163,7 +198,8 @@ async function act(route,key,done){const sp=$(`.spine[data-k="${CSS.escape(key)}
  try{S=await api(route,{key});if(route=="remove")closePage();draw();toast(done);return true}catch(e){toast(e.message,1)}finally{sp&&sp.classList.remove("busy")}}
 $("#shelf").onclick=e=>{const s=e.target.closest(".spine");if(s)s.dataset.k==sel?closePage():openPage(s.dataset.k)};
 $("#list").onclick=e=>{const u=e.target.closest("[data-up]"),r=e.target.closest("tr[data-k]");if(u){const a=S.addons.find(x=>x.key==u.dataset.up);u.disabled=true;act("install",a.key,`Updated ${a.name}`)}else if(r)openPage(r.dataset.k)};
-$("#hints").onclick=e=>e.target.dataset.go&&show(e.target.dataset.go);
+$("#hints").onclick=async e=>{const t=e.target;if(t.dataset.go)show(t.dataset.go);else if(t.dataset.x){markSeen(t.dataset.x);draw()}
+ else if(t.dataset.f){t.disabled=true;try{const r=await api("install_file",{path:t.dataset.f});markSeen(t.dataset.f);S=r;draw();toast(`Installed ${r.installed}`)}catch(x){t.disabled=false;toast(x.message,1)}}};
 $("#filter").oninput=()=>draw();$(".seg").onclick=e=>{if(e.target.dataset.view){view=localStorage.view=e.target.dataset.view;draw()}};
 $("#page").onclick=e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=S.addons.find(x=>x.key==sel),x=b.dataset.a;
  if(x=="close")closePage();else if(x=="find"){show("cat");$("#q").value=a.name.replace(/\s*[-–(\[].*$/,"");find()}else if(x=="info")info(a.key)
@@ -179,7 +215,7 @@ async function find(){$("#results").innerHTML=`<div class="grid">${'<div class="
  try{const r=await api("search?q="+encodeURIComponent($("#q").value));R=r.results;srcOn="All";
   $("#catnote").innerHTML=r.errors.map(m=>`<p class="hint"><span>${esc(m)}</span>${/key/.test(m)?'<button class="btn sm" data-go="set">Open Settings</button>':""}</p>`).join("");paint()}
  catch(e){$("#results").innerHTML=`<p class="empty">${esc(e.message)}</p>`}}
-function card(x){return `<button class="card" data-k="${esc(x.key)}">${x.thumb?`<img src="${esc(x.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=ph>${esc(x.name[0])}</div>'">`:`<div class="ph">${esc(x.name[0])}</div>`}
+function card(x){return `<button class="card${x.installed?" have":""}" data-k="${esc(x.key)}">${x.thumb?`<img src="${esc(x.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=ph>${esc(x.name[0])}</div>'">`:`<div class="ph">${esc(x.name[0])}</div>`}
  <h4>${esc(x.name)}</h4><p>${esc(x.summary||"by "+x.author)}</p>
  <span class="meta"><span class="src ${x.source}">${x.source}</span><span>${compact.format(x.downloads)} ${x.stars?"stars":"downloads"}</span>${x.updated?`<span>Updated ${ago(x.updated)}</span>`:""}${x.version?`<span>${esc(x.version.slice(0,28))}</span>`:""}
  <span class="btn sm" role="button" data-i="${esc(x.key)}" ${x.installed?'aria-disabled="true" style="filter:grayscale(.7);opacity:.6"':""}>${x.installed?"On the shelf":"Install"}</span></span></button>`}
@@ -203,18 +239,37 @@ async function info(key){const d=$("#dlg");d.innerHTML=`<div class="dbody"><p cl
  d.innerHTML=`<div class="dhead">${x.thumb?`<img src="${esc(x.thumb)}" alt="">`:""}<div><h2>${esc(x.name)}</h2><p class="by" style="margin:0">by ${esc(x.author)}${x.summary?" — "+esc(x.summary):""}</p>
   <p class="stats"><span class="src ${x.source}">${x.source}</span><span><b>${Number(x.downloads).toLocaleString()}</b> ${x.stars?"stars":"downloads"}</span>${x.updated?`<span>Updated <b>${ago(x.updated)}</b></span>`:""}${x.version?`<span>Version <b>${esc(x.version)}</b></span>`:""}<span>${esc(x.category)}</span></p></div><button class="x" data-d="close" aria-label="Close">×</button></div>
  <div class="dbody">${shots.length?`<div class="shot"><img id="big" alt="Screenshot of ${esc(x.name)}">${shots.length>1?'<button class="p" data-d="prev" aria-label="Previous screenshot">‹</button><button class="n" data-d="next" aria-label="Next screenshot">›</button>':""}</div>${shots.length>1?`<div class="thumbs">${shots.map((s,i)=>`<img src="${esc(s)}" data-t="${i}" alt="" loading="lazy">`).join("")}</div>`:""}`:""}
-  <iframe id="desc" sandbox="allow-popups allow-popups-to-escape-sandbox" title="Description"></iframe></div>
+  <div class="tabs" role="tablist"><button role="tab" data-tab="html" aria-selected="true">About</button>${x.changelog?'<button role="tab" data-tab="changelog" aria-selected="false">What’s new</button>':""}</div>
+  <iframe id="desc" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" title="Description"></iframe></div>
  <div class="dfoot"><span>${shots.length?shots.length+" screenshots":"No screenshots published"}</span>${x.page?`<a class="btn quiet" href="${esc(x.page)}" target="_blank" rel="noopener">Open on ${x.source}</a>`:""}<button class="btn" data-d="install" ${x.installed?"disabled":""}>${x.installed?"On the shelf":"Install"}</button></div>`;
  d.dataset.key=x.key;d.dataset.name=x.name;if(shots.length)shot(0);
- // the source's own HTML is shown in a script-less sandbox
- $("#desc").srcdoc=`<base target="_blank"><style>body{font:16px/1.55 Georgia,serif;color:#1c120c;margin:0;overflow-wrap:anywhere}img,video,iframe{max-width:100%;height:auto}a{color:#8a2f18}pre,code{white-space:pre-wrap;background:#0001;padding:2px 4px}h1,h2,h3{font-weight:400;line-height:1.2}table{border-collapse:collapse}td,th{border:1px solid #b9a577;padding:4px 8px}</style>${x.html||"<p><i>The source has no description for this addon.</i></p>"}`;
- $("#desc").onload=e=>{try{e.target.style.height=Math.min(4000,e.target.contentDocument.documentElement.scrollHeight+20)+"px"}catch{e.target.style.height="600px"}}}
-$("#dlg").onclick=async e=>{const d=$("#dlg"),a=e.target.dataset.d;if(e.target==d||a=="close")d.close();else if(a=="prev")shot(si-1);else if(a=="next")shot(si+1);else if(e.target.dataset.t)shot(+e.target.dataset.t);else if(e.target.id=="big")open(shots[si],"_blank","noopener");
+ d._x=x;fill("html")}
+function fill(which){const x=$("#dlg")._x,f=$("#desc");$$(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab==which));
+ // the source's own HTML is shown in a sandbox that cannot run scripts
+ f.srcdoc=`<base target="_blank"><style>body{font:16px/1.55 Georgia,serif;color:#1c120c;margin:0;overflow-wrap:anywhere}img,video,iframe{max-width:100%;height:auto}a{color:#8a2f18}pre,code{white-space:pre-wrap;background:#0001;padding:2px 4px}h1,h2,h3{font-weight:400;line-height:1.2}table{border-collapse:collapse}td,th{border:1px solid #b9a577;padding:4px 8px}</style>${x[which]||"<p><i>The source has no description for this addon.</i></p>"}`;
+ f.onload=e=>{try{e.target.style.height=Math.min(4000,e.target.contentDocument.documentElement.scrollHeight+20)+"px"}catch{e.target.style.height="600px"}}}
+$("#dlg").onclick=async e=>{const d=$("#dlg"),a=e.target.dataset.d;if(e.target.dataset.tab)return fill(e.target.dataset.tab);if(e.target==d||a=="close")d.close();else if(a=="prev")shot(si-1);else if(a=="next")shot(si+1);else if(e.target.dataset.t)shot(+e.target.dataset.t);else if(e.target.id=="big")open(shots[si],"_blank","noopener");
  else if(a=="install"){e.target.disabled=true;e.target.textContent="Installing…";if(await install(d.dataset.key,d.dataset.name))e.target.textContent="On the shelf";else{e.target.disabled=false;e.target.textContent="Install"}}};
 $("#dlg").onkeydown=e=>{if(shots.length>1){if(e.key=="ArrowLeft")shot(si-1);if(e.key=="ArrowRight")shot(si+1)}};
 $("#savekey").onclick=async()=>{const k=$("#key").value.trim();if(!k)return toast("Paste the key first",1);try{await api("key",{key:k});$("#key").value="";S=await api("state");R=[];draw();toast("Key saved")}catch(e){toast(e.message,1)}};
 $("#scan").onclick=async()=>{try{const r=await api("downloads");$("#files").innerHTML=r.files.length?`<table class="tbl" style="margin-bottom:20px"><tbody>${r.files.map(f=>`<tr><td>${esc(f.name)}</td><td>${mb(f.size)}</td><td>${ago(f.when)}</td><td><button class="btn sm" data-f="${esc(f.path)}">Install</button></td></tr>`).join("")}</tbody></table>`:`<p>No .zip files in Downloads.</p>`}catch(e){toast(e.message,1)}};
 $("#files").onclick=async e=>{const b=e.target.closest("[data-f]");if(!b)return;b.disabled=true;try{const r=await api("install_file",{path:b.dataset.f});S=r;draw();b.textContent="Installed";toast(`Installed ${r.installed}`)}catch(x){b.disabled=false;toast(x.message,1)}};
+const tip=$("#tip");
+$("#shelf").onmouseover=e=>{const sp=e.target.closest(".spine");if(!sp)return;const a=S.addons.find(x=>x.key==sp.dataset.k),r=sp.getBoundingClientRect();
+ tip.innerHTML=`<b>${esc(a.name)}</b>${esc(a.version||"version unknown")}${a.update?` <em>→ ${esc(a.latest)}</em>`:""}<br>${a.source=="Unlinked"?"Added by hand":esc(a.source)}, ${mb(a.size)}`;
+ tip.classList.add("on");const w=tip.offsetWidth;tip.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+"px";tip.style.top=Math.max(8,r.top-tip.offsetHeight-22)+"px"};
+$("#shelf").onmouseout=e=>{if(!e.relatedTarget||!e.relatedTarget.closest||!e.relatedTarget.closest(".spine"))tip.classList.remove("on")};
+addEventListener("keydown",e=>{const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+ if(e.key=="/"&&!typing&&!$("#dlg").open){e.preventDefault();const lib=$("#lib").classList.contains("on");if(!lib)show("cat");(lib?$("#filter"):$("#q")).focus()}
+ else if(e.key=="Escape"&&!$("#dlg").open){if(typing)document.activeElement.blur();else closePage()}});
+let drags=0;const hasFiles=e=>[...(e.dataTransfer?.types||[])].includes("Files");
+addEventListener("dragenter",e=>{if(hasFiles(e)){drags++;$("#drop").classList.add("on")}});
+addEventListener("dragleave",e=>{if(hasFiles(e)&&--drags<=0){drags=0;$("#drop").classList.remove("on")}});
+addEventListener("dragover",e=>hasFiles(e)&&e.preventDefault());
+addEventListener("drop",async e=>{if(!hasFiles(e))return;e.preventDefault();drags=0;$("#drop").classList.remove("on");
+ for(const f of e.dataTransfer.files){if(!/\.zip$/i.test(f.name)){toast(`${f.name} is not a .zip`,1);continue}
+  prog(1);try{const r=await fetch("/api/upload",{method:"POST",headers:{"X-Token":T,"X-Name":encodeURIComponent(f.name)},body:f}),j=await r.json();if(!r.ok)throw new Error(j.error);S=j;show("lib");draw();toast(`Installed ${j.installed}`)}catch(x){toast(x.message,1)}finally{prog(-1)}}});
+setInterval(async()=>{if(busy||$("#dlg").open||document.hidden)return;try{const n=await api0("state");if(JSON.stringify(n)!=JSON.stringify(S)){S=n;draw()}}catch{}},20000);
 setInterval(()=>api("ping").catch(()=>{}),30000);
 api("state").then(s=>{S=s;const h=decodeURIComponent(location.hash.slice(1));show(h=="cat"?"cat":"lib");draw(true);if(h.startsWith("info="))info(h.slice(5));else if(h&&h!="cat")openPage(h)}).catch(e=>toast(e.message,1));
 (()=>{if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;const c=$("#embers"),x=c.getContext("2d");let P=[];

@@ -264,6 +264,19 @@ def details(key):
         out = subprocess.run(["gh", "api", "-H", "Accept: application/vnd.github.html", f"repos/{ref}/readme"],
                              capture_output=True, text=True, timeout=40) if shutil.which("gh") else None
         r["html"] = out.stdout if out and out.returncode == 0 else ""
+    r["changelog"] = ""
+    try:
+        if src == "cf":
+            f = cf(f"/mods/{ref}/files?gameVersionTypeId={CF_FOREVER}&pageSize=1")
+            r["changelog"] = cf(f"/mods/{ref}/files/{f[0]['id']}/changelog") if f else ""
+        elif src == "wowi":
+            r["changelog"] = bbcode(http(f"https://api.mmoui.com/v3/game/WOW/filedetails/{ref}.json")[0].get("UIChangeLog"))
+        elif shutil.which("gh"):
+            out = subprocess.run(["gh", "api", "-H", "Accept: application/vnd.github.html+json", f"repos/{ref}/releases/latest",
+                                  "-q", ".body_html"], capture_output=True, text=True, timeout=40)
+            r["changelog"] = out.stdout if out.returncode == 0 else ""
+    except Exception:
+        pass                                        # release notes are a nicety; the details still show
     r["installed"] = key in load()["addons"]
     return r
 
@@ -381,10 +394,29 @@ def downloads():
 
 
 def install_file(path):
-    """Install a zip the user downloaded in the browser; an addon already on the shelf keeps its source."""
+    """Install a zip from the Downloads folder (picked in Settings or offered as a new download)."""
     z = Path(path).resolve()
     if z.parent != (HOME / "Downloads").resolve() or z.suffix != ".zip":
         raise RuntimeError("Only .zip files in your Downloads folder can be installed this way")
+    return install_zip(z)
+
+
+def install_upload(name, data):
+    """Install a zip dropped onto the window."""
+    if not name.lower().endswith(".zip"):
+        raise RuntimeError("Only .zip files can be installed")
+    up = CACHE / "uploads"
+    up.mkdir(parents=True, exist_ok=True)
+    z = up / re.sub(r"[^\w.-]", "_", Path(name).name)
+    z.write_bytes(data)
+    try:
+        return install_zip(z)
+    finally:
+        z.unlink(missing_ok=True)
+
+
+def install_zip(z):
+    """Unpack a local zip; an addon already on the shelf keeps its source and gets a backup."""
     if wow_running():
         raise RuntimeError("Close World of Warcraft first: it overwrites addon settings on exit")
     CACHE.mkdir(parents=True, exist_ok=True)
@@ -463,7 +495,9 @@ def view(st=None):
              "size": folder_size(a["folders"]), "notes": toc(a["folders"][0]).get("notes", ""),
              "can_rollback": any((BACKUPS / re.sub(r"[^\w.-]", "_", k)).glob("*")), **a} for k, a in st["addons"].items()]
     rows.sort(key=lambda r: r["name"].lower())
-    return {"addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir())}
+    fresh = [d for d in downloads() if time.time() - d["when"] < 1800]
+    return {"addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
+            "new_downloads": fresh}
 
 
 # ---------- window ----------
@@ -503,6 +537,9 @@ class H(BaseHTTPRequestHandler):
             elif route == "install_file":
                 name = install_file(body["path"])
                 r = {**view(), "installed": name}
+            elif route == "upload":
+                name = install_upload(body["name"], body["data"])
+                r = {**view(), "installed": name}
             elif route == "ping":
                 r = {}
             elif route == "key":
@@ -540,7 +577,12 @@ class H(BaseHTTPRequestHandler):
 
     def do_POST(self):
         n = int(self.headers.get("Content-Length") or 0)
-        self.handle_api(json.loads(self.rfile.read(n) or b"{}"))
+        if n > MAX_ZIP:
+            return self.send({"error": "That file is too large"}, 413)
+        raw = self.rfile.read(n)
+        if self.path == "/api/upload":
+            return self.handle_api({"name": urllib.parse.unquote(self.headers.get("X-Name", "")), "data": raw})
+        self.handle_api(json.loads(raw or b"{}"))
 
 
 def serve():
