@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Addon manager for the WoW Forever client. Stdlib only.
-Run `wowaddons` for the window, `wowaddons --selftest` for the built-in checks."""
+"""Addon manager for the WoW Forever client. The logic is stdlib only; the window is PySide6 (Qt WebEngine).
+Run `wowaddons` for the application, `wowaddons --selftest` for the built-in checks."""
 import json, os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.error, urllib.parse, urllib.request, zipfile, secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -24,6 +24,7 @@ SEED = {"DialogueUI": "gh:Peterodox/YUI-Dialogue", "AllTheThings": "gh:ATTWoWAdd
         "DynamicCam": "cf:101120", "GearQuestForever": "cf:1698950", "Leatrix_Plus": "cf:94855", "OpenMap": "cf:1735937",
         "TalentsForeverBook": "cf:1700435", "WhatsTraining": "cf:324944"}
 LOCK = threading.Lock()
+FETCH = None        # set by the application window: FETCH(url) -> Path of the file CurseForge's download page delivered
 
 
 _DIR = None
@@ -388,6 +389,13 @@ def search(q):
 
 
 # ---------- install / remove / rollback ----------
+class NeedsBrowser(Exception):
+    """The author only allows downloads on CurseForge itself: the file has to come through its download page."""
+    def __init__(self, key, new):
+        super().__init__("This author only allows downloads through CurseForge's own page")
+        self.info = {"key": key, "url": f"{new['page']}/download/{new['id']}", "remote_id": new["id"], "latest": new["version"]}
+
+
 def unpack(zpath, dest):
     """Extract into dest and return the addon folders (each has a .toc named after it)."""
     with zipfile.ZipFile(zpath) as z:
@@ -431,7 +439,7 @@ def install(key):
         raise RuntimeError("Close World of Warcraft first: it overwrites addon settings on exit")
     new = latest(key)
     if not new["url"]:
-        raise RuntimeError("The author does not allow downloads outside CurseForge. Get it from " + new["page"])
+        raise NeedsBrowser(key, new)
     CACHE.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=CACHE) as tmp:
         zpath = Path(tmp) / "a.zip"
@@ -458,14 +466,15 @@ def install(key):
 
 
 def downloads():
-    zips = sorted((HOME / "Downloads").glob("*.zip"), key=lambda p: -p.stat().st_mtime)[:12]
+    d = HOME / "Downloads"                            # browsers may save into a subfolder of Downloads
+    zips = sorted([*d.glob("*.zip"), *d.glob("*/*.zip")], key=lambda p: -p.stat().st_mtime)[:12]
     return [{"name": z.name, "path": str(z), "when": int(z.stat().st_mtime), "size": z.stat().st_size} for z in zips]
 
 
 def install_file(path):
     """Install a zip from the Downloads folder (picked in Settings or offered as a new download)."""
     z = Path(path).resolve()
-    if z.parent != (HOME / "Downloads").resolve() or z.suffix != ".zip":
+    if not z.is_relative_to((HOME / "Downloads").resolve()) or z.suffix != ".zip":
         raise RuntimeError("Only .zip files in your Downloads folder can be installed this way")
     return install_zip(z)
 
@@ -565,7 +574,8 @@ def view(st=None):
              "category": a.get("category") or guess_category(toc(a["folders"][0]), a["name"]), "icon": bool(icon_png(k)),
              "can_rollback": any((BACKUPS / re.sub(r"[^\w.-]", "_", k)).glob("*")), **a} for k, a in st["addons"].items()]
     rows.sort(key=lambda r: r["name"].lower())
-    fresh = [d for d in downloads() if time.time() - d["when"] < 1800]
+    fresh = [d for d in downloads() if time.time() - d["when"] < 1800 and d["size"] > 0
+             and not any(Path(d["path"] + e).exists() for e in (".crdownload", ".part"))]
     return {"addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
             "new_downloads": fresh, "categories": CATEGORIES}
 
@@ -631,17 +641,36 @@ class H(BaseHTTPRequestHandler):
                 {"install": install, "remove": remove, "rollback": rollback}[route](body["key"])
                 r = view()
             elif route == "update_all":
-                failed = {}
+                failed, browser = {}, []
                 for k, a in load()["addons"].items():
                     if a.get("update"):
                         try:
                             install(k)
+                        except NeedsBrowser as e:
+                            browser.append({**e.info, "name": a["name"]})
                         except Exception as e:
                             failed[a["name"]] = str(e)
-                r = {**view(), "failed": failed}
+                r = {**view(), "failed": failed, "browser": browser}
+            elif route == "fetch":                      # author-restricted file: through CurseForge's own download page, in the app
+                if not body["url"].startswith("https://www.curseforge.com/") or FETCH is None:
+                    raise RuntimeError("This download needs the desktop application")
+                z = FETCH(body["url"])
+                try:
+                    name = install_zip(z)
+                finally:
+                    z.unlink(missing_ok=True)
+                with LOCK:
+                    st = load()
+                    a = st["addons"].get(body["key"])
+                    if a and a["name"] == name:
+                        a.update(remote_id=body["remote_id"], latest=body["latest"], update=False, error="")
+                        save(st)
+                r = {**view(), "installed": name}
             else:
                 return self.send({"error": "unknown"}, 404)
             self.send(r)
+        except NeedsBrowser as e:
+            self.send({"error": str(e), "browser": e.info}, 409)
         except Exception as e:
             self.send({"error": str(e)}, 400)
 
@@ -670,17 +699,97 @@ class H(BaseHTTPRequestHandler):
         self.handle_api(json.loads(raw or b"{}"))
 
 
-def serve():
+def main():
+    """The application: a Qt window showing the interface, with its own downloader for CurseForge's download pages."""
+    from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Qt
+    from PySide6.QtGui import QDesktopServices, QIcon
+    from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    from PySide6.QtWidgets import QApplication, QDialog, QVBoxLayout
+
     H.token = secrets.token_urlsafe(24)
     srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
-    url = f"http://127.0.0.1:{srv.server_address[1]}/"
     threading.Thread(target=srv.serve_forever, daemon=True).start()
-    browser = shutil.which("google-chrome-stable") or shutil.which("chromium")
-    subprocess.Popen([browser, f"--app={url}", "--class=wowaddons"] if browser else ["xdg-open", url],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print("Addon manager at", url)
-    while time.time() - H.last < 180:      # the page pings every 30 s; exit after the window closes
-        time.sleep(5)
+
+    app = QApplication(sys.argv[:1])
+    app.setApplicationName("The Addon Shelf")
+    app.setDesktopFileName("wowaddons")
+    app.setWindowIcon(QIcon(str(HERE / "icon.svg")))
+    profile = QWebEngineProfile("wowaddons", app)               # keeps CurseForge's cookies between runs
+
+    class Page(QWebEnginePage):
+        def createWindow(self, _type):                          # links the user clicks open in their browser
+            tmp = QWebEnginePage(self)
+            tmp.urlChanged.connect(lambda u: (QDesktopServices.openUrl(u), tmp.deleteLater()))
+            return tmp
+
+    view = QWebEngineView()
+    view.setPage(Page(profile, view))
+    view.setWindowTitle("The Addon Shelf")
+    view.resize(1500, 950)
+    view.load(QUrl(f"http://127.0.0.1:{srv.server_address[1]}/"))
+    view.show()
+
+    class Fetcher(QObject):
+        """Loads a CurseForge download page in the app and hands back the file it delivers."""
+        wanted = Signal(str, object)
+
+        def __init__(self):
+            super().__init__()
+            self.box = QDialog(view)
+            self.box.setWindowTitle("CurseForge needs a moment: finish any check shown here")
+            self.box.resize(900, 700)
+            self.web = QWebEngineView(self.box)
+            self.web.setPage(QWebEnginePage(profile, self.web))
+            QVBoxLayout(self.box).addWidget(self.web)
+            self.job = None
+            self.reveal = QTimer(self, singleShot=True, interval=20000, timeout=self.box.show)
+            profile.downloadRequested.connect(self.incoming)
+            self.wanted.connect(self.start, Qt.QueuedConnection)
+
+        def start(self, url, job):
+            self.job = job
+            self.web.load(QUrl(url))
+            self.reveal.start()                                 # only shown if CurseForge wants something from the user
+
+        def incoming(self, dl):
+            if not self.job:
+                return dl.cancel()
+            job = self.job
+            (CACHE / "uploads").mkdir(parents=True, exist_ok=True)
+            dl.setDownloadDirectory(str(CACHE / "uploads"))
+            dl.setDownloadFileName(re.sub(r"[^\\w.-]", "_", dl.downloadFileName()) or "addon.zip")
+            dl.isFinishedChanged.connect(lambda: self.finish(dl, job))
+            dl.accept()
+
+        def finish(self, dl, job):
+            if not dl.isFinished() or job["done"].is_set():
+                return
+            self.reveal.stop()
+            self.box.hide()
+            self.web.setUrl(QUrl("about:blank"))
+            job["path"] = Path(dl.downloadDirectory()) / dl.downloadFileName()
+            self.job = None
+            job["done"].set()
+
+    fetcher = Fetcher()
+    busy = threading.Lock()
+
+    def fetch(url):                                             # called from a request thread
+        with busy:
+            job = {"done": threading.Event(), "path": None}
+            fetcher.wanted.emit(url, job)
+            if not job["done"].wait(180) or not job["path"] or not job["path"].exists():
+                fetcher.job = None
+                raise RuntimeError("CurseForge did not deliver the file. Try again in a minute")
+            return job["path"]
+
+    global FETCH
+    FETCH = fetch
+    shot = os.environ.get("WOWADDONS_SHOT")                     # debugging aid: save a picture of the window, then quit
+    if shot:
+        QTimer.singleShot(7000, lambda: (view.grab().save(shot), app.quit()))
+    sys.exit(app.exec())
 
 
 def selftest():
@@ -712,4 +821,4 @@ def selftest():
 
 
 if __name__ == "__main__":
-    selftest() if "--selftest" in sys.argv else serve()
+    selftest() if "--selftest" in sys.argv else main()

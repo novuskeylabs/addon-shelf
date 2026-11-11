@@ -160,7 +160,11 @@ const seen=new Set(JSON.parse(sessionStorage.seen||"[]")),markSeen=p=>{seen.add(
 let S={addons:[]},sel=null,view=localStorage.view=="list"?"list":"tiles",R=[],srcOn="All",shots=[],si=0;
 let busy=0;const prog=d=>{busy+=d;$("#prog").classList.toggle("on",busy>0)};
 async function api(p,body){if(p!="ping")prog(1);try{return await api0(p,body)}finally{if(p!="ping")prog(-1)}}
-async function api0(p,body){const r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw new Error(j.error||"Something went wrong");return j}
+async function api0(p,body){const r=await fetch("/api/"+p,{method:body?"POST":"GET",headers:{"X-Token":T,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});const j=await r.json();if(!r.ok)throw Object.assign(new Error(j.error||"Something went wrong"),{browser:j.browser});return j}
+// Authors who only allow downloads through CurseForge's own page: the app loads that page itself and installs what it delivers.
+async function viaBrowser(b,name){const t=tileOf(b.key);t&&t.classList.add("busy");toast(`Fetching ${name} from CurseForge…`);
+ try{const r=await api("fetch",b);S=r;draw();tileOf(b.key)?.classList.add("done");toast(`Installed ${r.installed}`);return true}
+ catch(e){toast(e.message,1);tileOf(b.key)?.classList.remove("busy")}}
 function toast(m,bad){const t=$("#toast");t.textContent=m;t.className="on"+(bad?" bad":"");clearTimeout(toast.t);toast.t=setTimeout(()=>t.className="",bad?8000:3200)}
 const hash=s=>[...s].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7),LEATHER=["#6e2a22","#27405c","#2f5131","#5a3a1e","#4c2c52","#7a4a1c","#1f4a4a","#5c2338"];
 const mb=n=>n>1<<30?(n/2**30).toFixed(1)+" GB":Math.max(1,Math.round(n/2**20))+" MB",compact=new Intl.NumberFormat("en",{notation:"compact",maximumFractionDigits:1});
@@ -198,7 +202,8 @@ function closePage(){sel=null;$("#page").classList.remove("on");$$(".tile.sel").
 const tileOf=k=>$(`.tile[data-k="${CSS.escape(k)}"]`);
 async function act(route,key,done){const t=tileOf(key);t&&t.classList.add("busy");
  try{const r=await api(route,{key});if(route=="remove"){closePage();if(t){t.classList.add("gone");await new Promise(z=>setTimeout(z,280))}}S=r;draw();
-  if(route!="remove"){const n=tileOf(key);n&&n.classList.add("done")}toast(done);return true}catch(e){toast(e.message,1);t&&t.classList.remove("busy")}}
+  if(route!="remove"){const n=tileOf(key);n&&n.classList.add("done")}toast(done);return true}
+ catch(e){if(e.browser)return viaBrowser(e.browser,S.addons.find(x=>x.key==key)?.name||"the addon");toast(e.message,1);t&&t.classList.remove("busy")}}
 $("#tiles").onclick=e=>{const u=e.target.closest("[data-up]"),t=e.target.closest(".tile");
  if(u){const a=S.addons.find(x=>x.key==u.dataset.up);act("install",a.key,`Updated ${a.name}`)}else if(t)t.dataset.k==sel?closePage():openPage(t.dataset.k)};
 $("#list").onclick=e=>{const u=e.target.closest("[data-up]"),r=e.target.closest("tr[data-k]");if(u){const a=S.addons.find(x=>x.key==u.dataset.up);u.disabled=true;act("install",a.key,`Updated ${a.name}`)}else if(r)openPage(r.dataset.k)};
@@ -212,7 +217,8 @@ $("#page").onclick=e=>{const b=e.target.closest("[data-a]");if(!b)return;const a
  else if(x=="remove"){if(b.dataset.sure)act("remove",a.key,`Removed ${a.name}. A copy is kept in case you want it back.`);else{b.dataset.sure=1;b.textContent="Click again to remove"}}};
 $("#chk").onclick=async e=>{e.target.disabled=true;e.target.textContent="Checking…";try{S=await api("check");draw();const u=S.addons.filter(a=>a.update).length;toast(u?`${u} addons have a newer version`:"Everything linked is up to date")}catch(x){toast(x.message,1)}e.target.disabled=false;e.target.textContent="Check for updates"};
 $("#upall").onclick=async e=>{e.target.disabled=true;$$(".tile.upd").forEach(s=>s.classList.add("busy"));
- try{const r=await api("update_all",{});S=r;draw();const f=Object.entries(r.failed||{});toast(f.length?"Could not update "+f.map(([n,m])=>n+": "+m).join("; "):"Updated everything",f.length)}catch(x){toast(x.message,1);draw()}e.target.disabled=false};
+ try{const r=await api("update_all",{});S=r;draw();const f=Object.entries(r.failed||{});if(f.length)toast("Could not update "+f.map(([n,m])=>n+": "+m).join("; "),1);
+  for(const b of r.browser||[])await viaBrowser(b,b.name);if(!f.length&&!(r.browser||[]).length)toast("Updated everything")}catch(x){toast(x.message,1);draw()}e.target.disabled=false};
 function show(v){$$("section").forEach(s=>s.classList.toggle("on",s.id==v));$$("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v==v));if(v!="lib")closePage();if(v=="cat"&&!R.length)find()}
 $("nav").onclick=e=>{const b=e.target.closest("[data-v]");b&&show(b.dataset.v)};
 /* catalog */
@@ -234,7 +240,7 @@ function paint(){const counts={All:R.length};R.forEach(r=>counts[r.source]=(coun
 $("#go").onclick=find;$("#q").onkeydown=e=>e.key=="Enter"&&find();$("#sort").onchange=paint;$("#catnote").onclick=e=>e.target.dataset.go&&show(e.target.dataset.go);
 $("#srcs").onclick=e=>{const b=e.target.closest("[data-s]");if(b){srcOn=b.dataset.s;paint()}};
 async function install(key,name,btn){if(btn){btn.textContent="Installing…";btn.setAttribute("aria-disabled","true");btn.closest(".card")?.classList.add("busy")}
- try{S=await api("install",{key});const r=R.find(x=>x.key==key);if(r)r.installed=true;draw();paint();toast(`Installed ${name}`);return true}catch(x){toast(x.message,1);if(btn){btn.textContent="Install";btn.removeAttribute("aria-disabled");btn.closest(".card")?.classList.remove("busy")}}}
+ try{S=await api("install",{key});const r=R.find(x=>x.key==key);if(r)r.installed=true;draw();paint();toast(`Installed ${name}`);return true}catch(x){if(x.browser){const ok=await viaBrowser(x.browser,name);if(ok){const r=R.find(z=>z.key==key);if(r)r.installed=true;paint()}btn?.closest(".card")?.classList.remove("busy");if(btn&&!ok){btn.textContent="Install";btn.removeAttribute("aria-disabled")}return ok}toast(x.message,1);if(btn){btn.textContent="Install";btn.removeAttribute("aria-disabled");btn.closest(".card")?.classList.remove("busy")}}}
 $("#results").onclick=e=>{const i=e.target.closest("[data-i]"),c=e.target.closest(".card");if(i){e.stopPropagation();if(!i.hasAttribute("aria-disabled")){const r=R.find(x=>x.key==i.dataset.i);install(r.key,r.name,i)}}else if(c)info(c.dataset.k)};
 /* details dialog */
 function shot(i){si=(i+shots.length)%shots.length;$("#big").src=shots[si];$$(".thumbs img").forEach((t,j)=>t.classList.toggle("on",j==si))}

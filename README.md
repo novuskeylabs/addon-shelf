@@ -8,12 +8,12 @@ bookshelf; a catalog searches several sources at once.
   screenshots and the source's description.
 - **Safe changes:** refuses to touch addons while the game is running, keeps the previous two versions of every
   addon, and can restore them.
-- **No dependencies:** Python 3.11+ standard library and a Chromium-based browser for the window.
+- **A real desktop application:** Python 3.11+ with PySide6 (Qt WebEngine) for the window; Pillow is optional and only used to show addon icons.
 
 ## Run
 
 ```
-python3 wowaddons.py            # opens the window
+python3 wowaddons.py            # starts the application
 python3 wowaddons.py --selftest # built-in checks
 ```
 
@@ -23,10 +23,12 @@ The addon folder (`_forever_/Interface/AddOns`) is found under `~/Games` on firs
 
 CurseForge data is only read through the official API (`api.curseforge.com`) with a key you paste into Settings; it is
 stored in `~/.config/wowaddons/curseforge.key` and never leaves your machine except as the API header. Files are
-downloaded only from the URL the API returns. If an author has turned off third-party distribution, the app does not
-download the file and links to the addon's CurseForge page instead. Every addon links back to its CurseForge page.
+downloaded from the URL the API returns. If an author has turned off third-party distribution, the API gives no URL; the
+app then loads that addon's CurseForge download page in its own window, exactly as a browser would, and installs the file
+the page delivers. Nothing is mirrored or re-hosted. Every addon links back to its CurseForge page.
 
-Addons you download yourself in the browser can be installed from Settings → "Install from a file you downloaded".
+Addons you download yourself can be dropped onto the window, or installed from Settings → "Install from a file you
+downloaded".
 
 ## Not affiliated
 
