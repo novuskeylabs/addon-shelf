@@ -1010,6 +1010,9 @@ class H(BaseHTTPRequestHandler):
                 return self.send(b"", 403, "text/plain")
             png = icon_png(q.get("key", [""])[0])
             return self.send(png, ctype="image/png", cache="private, max-age=3600") if png else self.send(b"", 404, "text/plain")
+        m = re.fullmatch(r"/art/([a-z]+)\.webp", u.path)       # theme artwork shipped with the app
+        if m and (HERE / "art" / (m.group(1) + ".webp")).is_file():
+            return self.send((HERE / "art" / (m.group(1) + ".webp")).read_bytes(), ctype="image/webp", cache="private, max-age=86400")
         if self.path.split("?")[0] == "/":
             page = (HERE / "index.html").read_text().replace("__TOKEN__", H.token)
             return self.send(page.encode(), ctype="text/html; charset=utf-8")

@@ -36,6 +36,12 @@ in `~/.config/wowaddons/curseforge.key` and is only ever sent as the API header.
 Addons you download yourself can be dropped onto the window, or installed from Settings → "Install from a file you
 downloaded".
 
+## Themes and artwork
+
+Settings offers faction, class and race themes plus plain colour schemes. The emblems in `art/` are original images
+generated for this project with a local image model (`tools/paint_emblems.py`, ComfyUI + Z-Image Turbo); none of them is
+game artwork.
+
 ## Not affiliated
 
 This is an independent, non-commercial tool. It is not affiliated with or endorsed by Blizzard Entertainment,
