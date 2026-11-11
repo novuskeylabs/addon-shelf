@@ -1,11 +1,16 @@
 # The Addon Shelf
 
-A small desktop addon manager for the World of Warcraft: Forever client on Linux. Your installed addons sit on a
-bookshelf; a catalog searches several sources at once.
+A desktop addon manager for the World of Warcraft: Forever client on Linux. Your installed addons are shown as tiles
+grouped by category; a catalog browses and searches several sources at once. Only Forever-compatible addons are shown,
+installed or managed.
 
 - **Sources:** CurseForge (official API, your own key), WoWInterface (public API) and GitHub releases.
 - **Catalog:** grouped by category and popularity, with downloads, last update and version; click an addon for
   screenshots and the source's description.
+- **Possible conflicts:** a matrix of installed addons that take over the same part of the interface.
+- **Reset to default settings:** sets an addon's saved settings aside (with undo) so it starts fresh.
+- **When things go wrong:** plain messages when offline, damaged addons are flagged with a repair option, and a missing
+  game folder is explained with a way to point at it.
 - **Safe changes:** refuses to touch addons while the game is running, keeps the previous two versions of every
   addon, and can restore them.
 - **A real desktop application:** Python 3.11+ with PySide6 (Qt WebEngine) for the window; Pillow is optional and only used to show addon icons.
