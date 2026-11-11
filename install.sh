@@ -54,10 +54,11 @@ if ! QT_QPA_PLATFORM=offscreen "$ENV/bin/python" -c 'from PySide6.QtWebEngineWid
     sed -n '1,3p' /tmp/lfas-import.$$ | sed 's/^/  /'
     rm -f /tmp/lfas-import.$$
     echo "Install them with your package manager, then run ./install.sh again. Usual package sets:"
-    echo "  Debian/Ubuntu/Mint: sudo apt install libnss3 libxkbcommon0 libegl1 libgl1 libfontconfig1 libdbus-1-3 libasound2t64 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libxkbfile1 libxcb-cursor0"
-    echo "  Fedora: sudo dnf install nss libxkbcommon mesa-libEGL mesa-libGL fontconfig dbus-libs alsa-lib libXcomposite libXdamage libXrandr libXtst libxkbfile xcb-util-cursor"
-    echo "  Arch/Manjaro: sudo pacman -S nss libxkbcommon libglvnd fontconfig dbus alsa-lib libxcomposite libxdamage libxrandr libxtst libxkbfile xcb-util-cursor"
-    echo "  openSUSE: sudo zypper install mozilla-nss libxkbcommon0 Mesa-libEGL1 Mesa-libGL1 fontconfig libasound2 libXcomposite1 libXdamage1 libXrandr2 libXtst6 libxkbfile1 libxcb-cursor0"
+    echo "  Debian 13+/Ubuntu 24.04+/Mint 22+: sudo apt install libnss3 libxkbcommon0 libegl1 libgl1 libfontconfig1 libdbus-1-3 libasound2t64 libglib2.0-0t64 libgssapi-krb5-2 libx11-6 libxext6 libxfixes3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libxkbfile1 libxcb-cursor0"
+    echo "  Older Debian/Ubuntu/Mint: the same list with libasound2 and libglib2.0-0 in place of the two names ending in t64"
+    echo "  Fedora: sudo dnf install nss libxkbcommon mesa-libEGL mesa-libGL fontconfig dbus-libs alsa-lib glib2 krb5-libs libX11 libXext libXfixes libXcomposite libXdamage libXrandr libXtst libxkbfile xcb-util-cursor"
+    echo "  Arch/Manjaro: sudo pacman -S nss libxkbcommon libglvnd fontconfig dbus alsa-lib glib2 krb5 libx11 libxext libxfixes libxcomposite libxdamage libxrandr libxtst libxkbfile xcb-util-cursor"
+    echo "  openSUSE: sudo zypper install mozilla-nss libxkbcommon0 Mesa-libEGL1 Mesa-libGL1 fontconfig libasound2 libglib-2_0-0 krb5 libX11-6 libXext6 libXfixes3 libXcomposite1 libXdamage1 libXrandr2 libXtst6 libxkbfile1 libxcb-cursor0"
     exit 1
 fi
 rm -f /tmp/lfas-import.$$
