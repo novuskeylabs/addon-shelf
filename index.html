@@ -145,7 +145,7 @@ body.locked [data-i],body.locked [data-u],body.locked [data-up],body.locked [dat
 .swo:hover{border-color:var(--brass)}.swo[aria-pressed=true]{border-color:var(--brass2);background:color-mix(in srgb,var(--brass) 14%,transparent);box-shadow:0 0 0 2px var(--brass2)}
 .sw{display:block;border-radius:9px;overflow:hidden;pointer-events:none;color:var(--text);background:var(--grain),linear-gradient(var(--bg),var(--bg2))}
 .swt{display:block;padding:8px 14px;font:400 19px/1.2 "IM Fell English",serif;color:var(--text-hi);background:radial-gradient(120% 160% at 50% 0,var(--top-a),var(--top-b));border-bottom:2px solid var(--brass)}.swt i{color:var(--brass)}
-.swb{display:block;padding:12px}.sw .tile{display:grid;width:100%}.swr{display:flex;align-items:center;gap:8px;margin-top:10px}.swu{margin-left:auto;font-size:14px;color:var(--ember)}
+.swb{display:block;padding:12px}.sw .tile{display:grid;width:100%}.swr{display:flex;align-items:center;gap:8px;margin-top:10px}
 .swn{display:flex;justify-content:space-between;align-items:baseline;padding:0 6px 2px;font-weight:500}.swn small{font-weight:400;color:var(--brass2)}
 /* my addons: content beside an always-visible conflicts panel */
 #lib.on{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:26px;align-items:start}.libmain{min-width:0}
@@ -439,8 +439,8 @@ setInterval(async()=>{if(busy||$("#dlg").open||document.hidden)return;try{const 
 function themes(){const cur=THEMES.find(t=>t.id==THEME);$("#crest").innerHTML=crest(cur.art);$("#crest").hidden=!cur.art;$("#crest").title=cur.name;
  const card=t=>`<button class="swo" data-theme-pick="${t.id}" aria-pressed="${t.id==THEME}">
  <span class="sw" style="${Object.entries(themeVars(t)).map(([k,v])=>k+":"+v).join(";")}"><span class="swt"><span>The Addon <i>Shelf</i></span>${t.art?`<span class="swc">${crest(t.art)}</span>`:""}</span>
- <span class="swb"><span class="tile"><span class="ico">${sigil("preview-"+t.id)}</span><span class="nm">Questie</span><span class="ver">12.6.5</span><span class="st"><span class="src CurseForge">CurseForge</span><span>48 MB</span><span class="ok">Up to date</span></span></span>
- <span class="swr"><span class="btn sm">Install</span><span class="btn sm quiet">View all</span><span class="swu">Update ready</span></span></span></span>
+ <span class="swb"><span class="tile"><span class="ico">${sigil("example-addon")}</span><span class="nm">Example addon</span><span class="ver">1.0.0</span><span class="st"><span>Source</span><span>12 MB</span><span class="ok">Up to date</span></span></span>
+ <span class="swr"><span class="btn sm">Install</span><span class="btn sm quiet">View all</span></span></span></span>
  <span class="swn">${esc(t.name)}${t.id==THEME?"<small>In use</small>":""}</span></button>`;
  $("#theme").innerHTML=[...new Set(THEMES.map(t=>t.group))].map(g=>`<h3 class="group">${g}<small>${THEMES.filter(t=>t.group==g).length}</small></h3><div class="swg">${THEMES.filter(t=>t.group==g).map(card).join("")}</div>`).join("")}
 themes();
