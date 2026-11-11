@@ -168,36 +168,77 @@ body.locked [data-i],body.locked [data-u],body.locked [data-up],body.locked [dat
 .tile.pair{box-shadow:var(--sh2),0 0 0 3px var(--ember)}
 .ph{overflow:hidden}span.ph{display:block}span.ph.mini{border-radius:8px}
 @media (max-width:900px){#lib.on{grid-template-columns:1fr}#conf{position:static;order:-1}}
+/* theme artwork: a crest in the header and a faint watermark behind the content */
+#crest{margin:0 0 10px;width:34px;height:34px;color:var(--brass2);flex:none}.crest{width:100%;height:100%;display:block}
+main::after{content:"";position:absolute;right:-30px;bottom:-40px;width:min(46vh,440px);aspect-ratio:1;background:var(--art,none) no-repeat center/contain;opacity:.09;pointer-events:none;z-index:0}
+main>section,aside{position:relative;z-index:1}
+.swt{display:flex;align-items:center;justify-content:space-between;gap:10px}.swc{width:30px;height:30px;flex:none}
+#theme h3.group{margin:22px 0 4px}#theme .swg{margin-top:10px}
 </style></head><body><script>
 // Colour schemes: a short palette each; every other colour role is derived from it.
-const THEMES=[
- {id:"midnight",name:"Midnight and gold",dark:1,bg:"#131c33",bg2:"#0b1122",top:"#1c2848",ca:"#24325a",cb:"#1a2544",text:"#e9eefa",text2:"#9ba8c3",on:"#edf1fb",on2:"#a9b5cf",line:"#31406a",acc:"#d8a83f",acc2:"#f4d37e",hot:"#ff7a3d"},
- {id:"emerald",name:"Emerald and parchment",dark:0,bg:"#1d3b36",bg2:"#142b27",top:"#4a3322",ca:"#fff8e4",cb:"#e8d6aa",text:"#f1e4c4",text2:"#c9d6c6",on:"#1c120c",on2:"#5d4a33",line:"#c6b283",acc:"#c9a04f",acc2:"#f0cd7c",hot:"#e0672f",onDarkBg:1},
- {id:"obsidian",name:"Obsidian and ember",dark:1,bg:"#191512",bg2:"#0f0c0a",top:"#2a211b",ca:"#2e2620",cb:"#231d18",text:"#f3ece4",text2:"#b3a698",on:"#f6efe7",on2:"#b9ab9c",line:"#43372d",acc:"#e8853a",acc2:"#ffb26b",hot:"#ffd166"},
- {id:"frost",name:"Frost and silver",dark:1,bg:"#141c26",bg2:"#0c1219",top:"#1e2a38",ca:"#243242",cb:"#1b2634",text:"#e8f0f7",text2:"#9fb0c2",on:"#eef4fa",on2:"#a8b8c9",line:"#34465a",acc:"#6fb9e8",acc2:"#b4defa",hot:"#ffb454"},
- {id:"violet",name:"Royal violet and gold",dark:1,bg:"#1a1331",bg2:"#100b20",top:"#2a1d4d",ca:"#2f2255",cb:"#231940",text:"#efeafb",text2:"#aea3cc",on:"#f2edfc",on2:"#b6abd3",line:"#44356f",acc:"#dfb04c",acc2:"#f7d98a",hot:"#ff7fa0"},
- {id:"forest",name:"Forest and copper",dark:1,bg:"#11211b",bg2:"#0a1510",top:"#1b3328",ca:"#213a2f",cb:"#182c23",text:"#e9f3ec",text2:"#9fb8a9",on:"#eef6f0",on2:"#a7bfb0",line:"#30503f",acc:"#d58a4f",acc2:"#f2b582",hot:"#f2c14e"},
- {id:"crimson",name:"Crimson and steel",dark:1,bg:"#1a1215",bg2:"#100a0c",top:"#2d1a1f",ca:"#30232a",cb:"#251a20",text:"#f4ebee",text2:"#b9a5ac",on:"#f7eef1",on2:"#bfabb2",line:"#47323a",acc:"#e4687a",acc2:"#ffa3ad",hot:"#ffc46b"},
- {id:"dusk",name:"Dusk rose",dark:1,bg:"#221a25",bg2:"#151017",top:"#33263a",ca:"#382b40",cb:"#2b2031",text:"#f5ecf2",text2:"#bca9b9",on:"#f7eff4",on2:"#c2afbe",line:"#4e3c56",acc:"#e39a86",acc2:"#ffc7b6",hot:"#ffd27a"},
- {id:"parchment",name:"Parchment and burgundy",dark:0,bg:"#efe6d2",bg2:"#e4d8be",top:"#e6dabf",ca:"#fffaf0",cb:"#f6ecd6",text:"#2a1f17",text2:"#6d5c4a",on:"#2a1f17",on2:"#6d5c4a",line:"#d3c4a3",acc:"#8a2f2f",acc2:"#a84444",hot:"#c2571a"},
- {id:"stone",name:"Stone and teal",dark:0,bg:"#e9ecef",bg2:"#dde2e7",top:"#dfe4e9",ca:"#ffffff",cb:"#f4f6f8",text:"#1c2430",text2:"#5b6776",on:"#1c2430",on2:"#5b6776",line:"#cfd6dd",acc:"#0f7c86",acc2:"#0b6770",hot:"#c9541a"}];
+const PLAIN=[
+ {group:"Colour schemes",id:"midnight",name:"Midnight and gold",dark:1,bg:"#131c33",bg2:"#0b1122",top:"#1c2848",ca:"#24325a",cb:"#1a2544",text:"#e9eefa",text2:"#9ba8c3",on:"#edf1fb",on2:"#a9b5cf",line:"#31406a",acc:"#d8a83f",acc2:"#f4d37e",hot:"#ff7a3d"},
+ {group:"Colour schemes",id:"emerald",name:"Emerald and parchment",dark:0,bg:"#1d3b36",bg2:"#142b27",top:"#4a3322",ca:"#fff8e4",cb:"#e8d6aa",text:"#f1e4c4",text2:"#c9d6c6",on:"#1c120c",on2:"#5d4a33",line:"#c6b283",acc:"#c9a04f",acc2:"#f0cd7c",hot:"#e0672f",onDarkBg:1},
+ {group:"Colour schemes",id:"obsidian",name:"Obsidian and ember",dark:1,bg:"#191512",bg2:"#0f0c0a",top:"#2a211b",ca:"#2e2620",cb:"#231d18",text:"#f3ece4",text2:"#b3a698",on:"#f6efe7",on2:"#b9ab9c",line:"#43372d",acc:"#e8853a",acc2:"#ffb26b",hot:"#ffd166"},
+ {group:"Colour schemes",id:"frost",name:"Frost and silver",dark:1,bg:"#141c26",bg2:"#0c1219",top:"#1e2a38",ca:"#243242",cb:"#1b2634",text:"#e8f0f7",text2:"#9fb0c2",on:"#eef4fa",on2:"#a8b8c9",line:"#34465a",acc:"#6fb9e8",acc2:"#b4defa",hot:"#ffb454"},
+ {group:"Colour schemes",id:"violet",name:"Royal violet and gold",dark:1,bg:"#1a1331",bg2:"#100b20",top:"#2a1d4d",ca:"#2f2255",cb:"#231940",text:"#efeafb",text2:"#aea3cc",on:"#f2edfc",on2:"#b6abd3",line:"#44356f",acc:"#dfb04c",acc2:"#f7d98a",hot:"#ff7fa0"},
+ {group:"Colour schemes",id:"forest",name:"Forest and copper",dark:1,bg:"#11211b",bg2:"#0a1510",top:"#1b3328",ca:"#213a2f",cb:"#182c23",text:"#e9f3ec",text2:"#9fb8a9",on:"#eef6f0",on2:"#a7bfb0",line:"#30503f",acc:"#d58a4f",acc2:"#f2b582",hot:"#f2c14e"},
+ {group:"Colour schemes",id:"crimson",name:"Crimson and steel",dark:1,bg:"#1a1215",bg2:"#100a0c",top:"#2d1a1f",ca:"#30232a",cb:"#251a20",text:"#f4ebee",text2:"#b9a5ac",on:"#f7eef1",on2:"#bfabb2",line:"#47323a",acc:"#e4687a",acc2:"#ffa3ad",hot:"#ffc46b"},
+ {group:"Colour schemes",id:"dusk",name:"Dusk rose",dark:1,bg:"#221a25",bg2:"#151017",top:"#33263a",ca:"#382b40",cb:"#2b2031",text:"#f5ecf2",text2:"#bca9b9",on:"#f7eff4",on2:"#c2afbe",line:"#4e3c56",acc:"#e39a86",acc2:"#ffc7b6",hot:"#ffd27a"},
+ {group:"Colour schemes",id:"parchment",name:"Parchment and burgundy",dark:0,bg:"#efe6d2",bg2:"#e4d8be",top:"#e6dabf",ca:"#fffaf0",cb:"#f6ecd6",text:"#2a1f17",text2:"#6d5c4a",on:"#2a1f17",on2:"#6d5c4a",line:"#d3c4a3",acc:"#8a2f2f",acc2:"#a84444",hot:"#c2571a"},
+ {group:"Colour schemes",id:"stone",name:"Stone and teal",dark:0,bg:"#e9ecef",bg2:"#dde2e7",top:"#dfe4e9",ca:"#ffffff",cb:"#f4f6f8",text:"#1c2430",text2:"#5b6776",on:"#1c2430",on2:"#5b6776",line:"#cfd6dd",acc:"#0f7c86",acc2:"#0b6770",hot:"#c9541a"}];
 const mixc=(a,b,t)=>"#"+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-t)+parseInt(b.slice(i,i+2),16)*t).toString(16).padStart(2,"0")).join("");
+// A dark scheme grown from one signature colour (c) and the colour its world is steeped in (tint).
+const grown=(group,id,name,c,tint,art,extra={})=>({group,id,name,art,dark:1,bg:mixc("#0e1016",tint,.16),bg2:mixc("#07080c",tint,.08),top:mixc("#12141b",tint,.42),ca:mixc("#1c1f29",tint,.2),cb:mixc("#151821",tint,.15),
+ text:"#eef0f6",text2:mixc("#a4aab8",tint,.12),on:"#f0f2f8",on2:mixc("#aab0be",tint,.12),line:mixc("#2c303c",tint,.3),acc:mixc(c,"#000000",.2),acc2:c,hot:"#ff8a3d",...extra});
+const THEMES=[
+ {group:"Factions",id:"alliance",name:"For the Alliance!",art:"alliance",dark:1,bg:"#0e1c3d",bg2:"#081128",top:"#17377a",ca:"#1c3a75",cb:"#152c5c",text:"#eaf0ff",text2:"#a3b6dc",on:"#edf2ff",on2:"#abbce0",line:"#33539a",acc:"#c99a2e",acc2:"#f5d06a",hot:"#ff9d4d"},
+ {group:"Factions",id:"horde",name:"For the Horde!",art:"horde",dark:1,bg:"#1a0f0f",bg2:"#0e0707",top:"#5a1212",ca:"#3b1515",cb:"#2c1010",text:"#f7edea",text2:"#c9aaa4",on:"#f8efec",on2:"#ceb0aa",line:"#6a2424",acc:"#b3261e",acc2:"#f0c987",btnA:"#d63a2f",btnB:"#a31f17",ink:"#ffffff",hot:"#ffb347"},
+ grown("Classes","warrior","Warrior","#C69B6D","#6b4a2a","warrior"),grown("Classes","paladin","Paladin","#F48CBA","#8a3d63","paladin"),grown("Classes","hunter","Hunter","#AAD372","#3f5a22","hunter"),
+ grown("Classes","rogue","Rogue","#FFF468","#5c5416","rogue"),grown("Classes","priest","Priest","#FFFFFF","#565b6b","priest"),grown("Classes","shaman","Shaman","#4d9dff","#0b3f8a","shaman",{btnA:"#2f86f0",btnB:"#0070DD",ink:"#ffffff"}),
+ grown("Classes","mage","Mage","#3FC7EB","#155a70","mage"),grown("Classes","warlock","Warlock","#a5a6ff","#3c3d8f","warlock",{btnA:"#9c9df5",btnB:"#8788EE"}),grown("Classes","druid","Druid","#FF7C0A","#7a3a05","druid"),
+ grown("Races","human","Human","#e3b341","#1f4fa3","human"),grown("Races","dwarf","Dwarf","#f08a24","#5b6472","dwarf"),grown("Races","nightelf","Night Elf","#c9b8ff","#4a2478","nightelf"),grown("Races","gnome","Gnome","#e2c15a","#0f7f7f","gnome"),
+ grown("Races","orc","Orc","#f8935c","#7a1f12","orc"),grown("Races","undead","Undead","#9be564","#4b3a5e","undead"),grown("Races","tauren","Tauren","#4fd1c5","#7a4a22","tauren"),grown("Races","troll","Troll","#ff9d2e","#0f6b5c","troll"),
+ ...PLAIN];
+// Original line-art emblems (drawn for this app; no game artwork): paths in a 100x100 box.
+const gearPath=(()=>{let d="";for(let i=0;i<8;i++){const a=i*Math.PI/4,p=(r,o)=>(50+r*Math.cos(a+o)).toFixed(1)+" "+(50+r*Math.sin(a+o)).toFixed(1);d+=(i?"L":"M")+p(30,-.2)+"L"+p(40,-.12)+"L"+p(40,.12)+"L"+p(30,.2)}return d+"Z"})();
+const ART={alliance:["M50 8L86 20V48C86 70 70 86 50 94C30 86 14 70 14 48V20Z","M50 24V68","M38 36H62","M50 68l-6 9h12z","M27 40Q23 60 39 77","M73 40Q77 60 61 77"],
+ horde:["M50 28A24 24 0 1 0 50 76A24 24 0 1 0 50 28Z","M50 6L58 27H42Z","M6 52L27 44V60Z","M94 52L73 44V60Z","M50 98L42 77H58Z","M38 58Q34 72 46 70","M62 58Q66 72 54 70","M40 46L50 38L60 46"],
+ warrior:["M22 80L70 24","M70 24l9-7l-2 11z","M78 80L30 24","M30 24l-9-7l2 11z","M26 62l13 13","M74 62l-13 13"],
+ paladin:["M50 36V90","M30 14H70V36H30Z","M50 4A22 22 0 0 1 72 26","M50 4A22 22 0 0 0 28 26","M40 62H60"],
+ hunter:["M30 12Q80 50 30 88","M30 12V88","M14 50H84","M84 50l-11-7","M84 50l-11 7","M14 50l6-6","M14 50l6 6"],
+ rogue:["M30 82L62 24l7-10l-1 13z","M22 68l15 8","M70 82L38 24l-7-10l1 13z","M78 68l-15 8"],
+ priest:["M50 16V90","M32 38H68","M50 20A18 18 0 1 1 49.9 20","M50 4v6","M20 38h6","M74 38h6","M29 17l4 4","M71 17l-4 4"],
+ shaman:["M58 8L28 54H47L40 92L72 44H53Z"],
+ mage:["M50 8L59 41L92 50L59 59L50 92L41 59L8 50L41 41Z","M50 42A8 8 0 1 0 50 58A8 8 0 1 0 50 42Z"],
+ warlock:["M50 92C24 86 22 60 38 44C38 56 46 58 46 50C46 34 56 26 54 8C74 28 82 52 74 70C70 82 62 90 50 92Z","M50 80C42 76 42 66 50 58C58 66 58 76 50 80Z"],
+ druid:["M50 88C32 88 28 72 38 62C44 56 56 56 62 62C72 72 68 88 50 88Z","M28 39A7 7 0 1 0 28 53A7 7 0 1 0 28 39Z","M42 25A7 7 0 1 0 42 39A7 7 0 1 0 42 25Z","M58 25A7 7 0 1 0 58 39A7 7 0 1 0 58 25Z","M72 39A7 7 0 1 0 72 53A7 7 0 1 0 72 39Z"],
+ human:["M26 90V40H74V90Z","M22 40V24H34V32H44V24H56V32H66V24H78V40","M44 90V72Q50 62 56 72V90"],
+ dwarf:["M18 40H68Q82 40 88 30V46Q80 56 66 56V68H78V80H26V68H40V56Q26 54 18 40Z","M50 22l14-12","M46 18l8 8"],
+ nightelf:["M62 12A40 40 0 1 0 88 62A30 30 0 1 1 62 12Z","M30 26l3 8l8 3l-8 3l-3 8l-3-8l-8-3l8-3z"],
+ gnome:[gearPath,"M50 37A13 13 0 1 0 50 63A13 13 0 1 0 50 37Z"],
+ orc:["M30 92L62 18","M56 14C80 10 92 30 84 50C76 44 66 40 54 42Z","M56 14C46 22 44 34 54 42"],
+ undead:["M50 10C26 10 14 28 16 46C17 58 24 62 28 66V80H72V66C76 62 83 58 84 46C86 28 74 10 50 10Z","M38 37A7 7 0 1 0 38 51A7 7 0 1 0 38 37Z","M62 37A7 7 0 1 0 62 51A7 7 0 1 0 62 37Z","M50 54l-4 8h8z","M40 80V70","M50 80V70","M60 80V70"],
+ tauren:["M14 18C10 50 30 62 50 62C70 62 90 50 86 18","M14 18C22 36 34 44 50 44C66 44 78 36 86 18","M38 62V72Q50 84 62 72V62","M50 80A7 7 0 1 0 50 94A7 7 0 1 0 50 80Z"],
+ troll:["M28 14H72L80 50L50 92L20 50Z","M34 40l12 4","M66 40l-12 4","M42 62H58","M38 66Q34 80 30 84","M62 66Q66 80 70 84"]};
+const crest=(art,color="currentColor",w=4)=>ART[art]?`<svg class="crest" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ART[art].map(d=>`<path d="${d}"/>`).join("")}</svg>`:"";
 const lum=h=>[1,3,5].reduce((s,i,n)=>s+parseInt(h.slice(i,i+2),16)*[.299,.587,.114][n],0);
 function themeVars(t){const darkBg=t.dark||t.onDarkBg,k="#000000",w="#ffffff";return {
  "--bg":t.bg,"--bg2":t.bg2,"--top-a":t.top,"--top-b":mixc(t.top,k,darkBg?.35:.05),"--top-c":mixc(t.top,k,darkBg?.6:.1),
  "--text":t.text,"--text-hi":darkBg?mixc(t.text,w,.6):mixc(t.text,k,.3),"--text2":t.text2,
  "--surf":t.cb,"--card-a":t.ca,"--card-b":t.cb,"--card-hi":t.dark?"#ffffff1a":"#ffffffcc","--surf-head":mixc(t.cb,k,t.dark?.25:.07),"--surf-hover":mixc(t.ca,t.dark?w:k,t.dark?.08:.03),"--surf-line":t.line,"--on":t.on,"--on2":t.on2,
- "--brass":t.acc,"--brass2":t.acc2,"--btn-a":t.acc2,"--btn-b":t.acc,"--btn-line":mixc(t.acc,k,.4),"--btn-ink":lum(t.acc2)>150?"#1b1304":"#ffffff",
+ "--brass":t.acc,"--brass2":t.acc2,"--btn-a":t.btnA||t.acc2,"--btn-b":t.btnB||t.acc,"--btn-line":mixc(t.btnB||t.acc,k,.4),"--btn-ink":t.ink||(lum(t.btnA||t.acc2)>150?"#1b1304":"#ffffff"),
  "--ember":t.hot,"--hot-on":t.dark?mixc(t.hot,w,.2):mixc(t.hot,k,.42),"--ok":t.dark?"#6ad394":"#2f6a3a","--ok-dot":"#6ad394","--ok-bg":t.dark?"#1d6a41":"#2f6a3a","--warn":t.dark?"#ff9d82":"#8a2f18",
  "--danger-a":"#d6563a","--danger-b":"#a8371f","--danger-line":"#6e2010","--danger-ink":"#fff0ea",
  "--field":darkBg?mixc(t.bg2,k,.3):w,"--ph":t.dark?mixc(t.cb,k,.3):mixc(t.cb,k,.12),
  "--src-cf":t.dark?"#ff9166":"#96371c","--src-gh":t.dark?"#8db6ff":"#2c4a6e","--src-wowi":t.dark?"#63d2b4":"#1f5a4f",
  "--toast-bg":darkBg?mixc(t.bg2,k,.3):"#20242c","--toast-text":darkBg?t.text:"#f2f4f8"}}
-function applyTheme(id){const t=THEMES.find(x=>x.id==id)||THEMES[0];for(const [k,v] of Object.entries(themeVars(t)))document.documentElement.style.setProperty(k,v);return t.id}
+function applyTheme(id){const t=THEMES.find(x=>x.id==id)||THEMES.find(x=>x.id=="midnight"),st=document.documentElement.style;for(const [k,v] of Object.entries(themeVars(t)))st.setProperty(k,v);
+ st.setProperty("--art",t.art?`url("data:image/svg+xml,${encodeURIComponent(crest(t.art,t.acc2,2.2))}")`:"none");document.documentElement.dataset.art=t.art||"";return t.id}
 let THEME=applyTheme(localStorage.theme);
 </script>
 <div id="prog"></div><div id="drop"><div>Drop the addon’s .zip to install it<small>An addon already on your shelf is updated in place and keeps a backup</small></div></div>
-<header><h1><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="50" width="48" height="6" rx="1" fill="#80583a"/><rect x="13" y="16" width="10" height="34" rx="1" fill="#6e2a22"/><rect x="25" y="10" width="12" height="40" rx="1" fill="#27405c"/><rect x="39" y="20" width="11" height="30" rx="1" fill="#7a4a1c"/><g fill="#f0cd7c"><rect x="13" y="21" width="10" height="3"/><rect x="25" y="16" width="12" height="3"/><rect x="39" y="25" width="11" height="3"/><rect x="13" y="42" width="10" height="3"/><rect x="25" y="42" width="12" height="3"/><rect x="39" y="42" width="11" height="3"/></g><path d="M29 4h4v12l-2-2-2 2z" fill="#e0672f"/></svg><span>The Addon <i>Shelf</i></span></h1><p class="realm" title="Only addons built for the World of Warcraft: Forever client are shown and managed">WoW Forever</p><p id="status"></p>
+<header><h1><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="50" width="48" height="6" rx="1" fill="#80583a"/><rect x="13" y="16" width="10" height="34" rx="1" fill="#6e2a22"/><rect x="25" y="10" width="12" height="40" rx="1" fill="#27405c"/><rect x="39" y="20" width="11" height="30" rx="1" fill="#7a4a1c"/><g fill="#f0cd7c"><rect x="13" y="21" width="10" height="3"/><rect x="25" y="16" width="12" height="3"/><rect x="39" y="25" width="11" height="3"/><rect x="13" y="42" width="10" height="3"/><rect x="25" y="42" width="12" height="3"/><rect x="39" y="42" width="11" height="3"/></g><path d="M29 4h4v12l-2-2-2 2z" fill="#e0672f"/></svg><span>The Addon <i>Shelf</i></span></h1><p class="realm" title="Only addons built for the World of Warcraft: Forever client are shown and managed">WoW Forever</p><span id="crest"></span><p id="status"></p>
 <nav role="tablist"><button role="tab" data-v="lib" aria-selected="true">My addons<b id="badge" hidden></b></button><button role="tab" data-v="cat">Catalog</button><button role="tab" data-v="set">Settings</button></nav></header>
 <main>
 <section id="lib"><div class="libmain">
@@ -219,7 +260,7 @@ let THEME=applyTheme(localStorage.theme);
  <h2 style="margin-top:34px">Install from a file you downloaded</h2>
  <p>Works without any key: download an addon’s .zip in your browser, then pick it here. If the addon is already on your shelf it is updated in place.</p>
  <div class="bar"><button class="btn quiet" id="scan">Look in my Downloads folder</button></div><div id="files"></div><p id="dir"></p>
- <h2 style="margin-top:34px">Colours</h2><p>Pick a colour scheme. Each preview shows how an addon tile and a button look in it.</p><div class="swg" id="theme" role="group" aria-label="Colour scheme"></div>
+ <h2 style="margin-top:34px">Themes</h2><p>Pick a theme: your faction, your class, your race, or a plain colour scheme. Each preview shows how an addon tile and the buttons look in it. The emblems are drawn for this app.</p><div id="theme" role="group" aria-label="Theme"></div>
  <h2 style="margin-top:34px">Shortcuts</h2><p><kbd>/</kbd> search &nbsp; <kbd>Esc</kbd> close a page or dialog &nbsp; <kbd>←</kbd><kbd>→</kbd> flip through screenshots. You can also drop a .zip anywhere on the window.</p></section>
 <aside id="page"><div></div></aside>
 </main>
@@ -415,11 +456,13 @@ addEventListener("drop",async e=>{if(!hasFiles(e))return;e.preventDefault();drag
  for(const f of e.dataTransfer.files){if(!/\.zip$/i.test(f.name)){toast(`${f.name} is not a .zip`,1);continue}
   prog(1);try{const r=await fetch("/api/upload",{method:"POST",headers:{"X-Token":T,"X-Name":encodeURIComponent(f.name)},body:f}),j=await r.json();if(!r.ok)throw new Error(j.error);S=j;show("lib");draw();toast(`Installed ${j.installed}`)}catch(x){toast(x.message,1)}finally{prog(-1)}}});
 setInterval(async()=>{if(busy||$("#dlg").open||document.hidden)return;try{const n=await api0("state");if(JSON.stringify(n)!=JSON.stringify(S)){S=n;draw()}}catch{}},20000);
-function themes(){$("#theme").innerHTML=THEMES.map(t=>`<button class="swo" data-theme-pick="${t.id}" aria-pressed="${t.id==THEME}">
- <span class="sw" style="${Object.entries(themeVars(t)).map(([k,v])=>k+":"+v).join(";")}"><span class="swt">The Addon <i>Shelf</i></span>
+function themes(){const cur=THEMES.find(t=>t.id==THEME);$("#crest").innerHTML=crest(cur.art);$("#crest").hidden=!cur.art;$("#crest").title=cur.name;
+ const card=t=>`<button class="swo" data-theme-pick="${t.id}" aria-pressed="${t.id==THEME}">
+ <span class="sw" style="${Object.entries(themeVars(t)).map(([k,v])=>k+":"+v).join(";")}"><span class="swt"><span>The Addon <i>Shelf</i></span>${t.art?`<span class="swc">${crest(t.art,t.acc2)}</span>`:""}</span>
  <span class="swb"><span class="tile"><span class="ico">${sigil("preview-"+t.id)}</span><span class="nm">Questie</span><span class="ver">12.6.5</span><span class="st"><span class="src CurseForge">CurseForge</span><span>48 MB</span><span class="ok">Up to date</span></span></span>
  <span class="swr"><span class="btn sm">Install</span><span class="btn sm quiet">View all</span><span class="swu">Update ready</span></span></span></span>
- <span class="swn">${esc(t.name)}${t.id==THEME?"<small>In use</small>":""}</span></button>`).join("")}
+ <span class="swn">${esc(t.name)}${t.id==THEME?"<small>In use</small>":""}</span></button>`;
+ $("#theme").innerHTML=[...new Set(THEMES.map(t=>t.group))].map(g=>`<h3 class="group">${g}<small>${THEMES.filter(t=>t.group==g).length}</small></h3><div class="swg">${THEMES.filter(t=>t.group==g).map(card).join("")}</div>`).join("")}
 themes();
 $("#theme").onclick=e=>{const b=e.target.closest("[data-theme-pick]");if(b){THEME=localStorage.theme=applyTheme(b.dataset.themePick);themes();if($("#dlg").open)fill("html")}};
 api("state").then(s=>{S=s;api("check").then(n=>{S=n;checked=Date.now();draw()}).catch(()=>{});const h=decodeURIComponent(location.hash.slice(1));show(h=="cat"?"cat":"lib");draw(true);if(h.startsWith("info="))info(h.slice(5));else if(h&&h!="cat")openPage(h)}).catch(e=>toast(e.message,1));
