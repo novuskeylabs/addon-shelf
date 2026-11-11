@@ -149,7 +149,8 @@ body.locked [data-i],body.locked [data-u],body.locked [data-up],body.locked [dat
 .swn{display:flex;justify-content:space-between;align-items:baseline;padding:0 6px 2px;font-weight:500}.swn small{font-weight:400;color:var(--brass2)}
 /* my addons: content beside an always-visible conflicts panel */
 #lib.on{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:26px;align-items:start}.libmain{min-width:0}
-#conf{position:sticky;top:0;background:var(--grain),linear-gradient(160deg,var(--card-a),var(--card-b));color:var(--on);border-radius:var(--r);padding:16px 16px 14px;box-shadow:var(--sh1);outline:1px solid color-mix(in srgb,var(--surf-line) 75%,transparent);outline-offset:-1px}
+#lib .side{position:sticky;top:0;display:flex;flex-direction:column;gap:14px;height:calc(100vh - 116px);min-height:0}#conf{flex:none}
+#conf{background:var(--grain),linear-gradient(160deg,var(--card-a),var(--card-b));color:var(--on);border-radius:var(--r);padding:16px 16px 14px;box-shadow:var(--sh1);outline:1px solid color-mix(in srgb,var(--surf-line) 75%,transparent);outline-offset:-1px}
 #conf h3.group{color:var(--on);font-size:21px}#conf h3.group small{color:var(--ember);font-weight:700}#conf h3.group::after{background:linear-gradient(90deg,var(--surf-line),#0000)}
 .cnote{margin:10px 0 0;font-size:14.5px;line-height:1.4;color:var(--on2);min-height:4.2em}.cnote b{color:var(--on);font-weight:700}
 .cmx{display:grid;grid-template-columns:118px repeat(var(--n),var(--cs));grid-auto-rows:var(--cs);align-items:center;justify-items:center;margin-top:8px}
@@ -167,10 +168,15 @@ body.locked [data-i],body.locked [data-u],body.locked [data-up],body.locked [dat
 .cfoot{margin-top:6px;opacity:.75}.cfoot.on{opacity:1;box-shadow:0 0 0 2px var(--brass2)}
 .tile.pair{box-shadow:var(--sh2),0 0 0 3px var(--ember)}
 .ph{overflow:hidden}span.ph{display:block}span.ph.mini{border-radius:8px}
-@media (max-width:900px){#lib.on{grid-template-columns:1fr}#conf{position:static;order:-1}}
+@media (max-width:900px){#lib.on{grid-template-columns:1fr}#lib .side{position:static;order:-1}#hero{display:none}}
 /* theme artwork: a crest in the header and a faint watermark behind the content */
-#crest{margin:-4px 0 6px;width:46px;height:46px;flex:none;filter:drop-shadow(0 2px 4px #0009)}.crest{width:100%;height:100%;display:block;object-fit:contain}
-main::after{content:"";position:absolute;right:-30px;bottom:-40px;width:min(46vh,440px);aspect-ratio:1;background:var(--art,none) no-repeat center/contain;opacity:.16;pointer-events:none;z-index:0}
+#crest{margin:-6px 0 4px;width:58px;height:58px;flex:none;filter:drop-shadow(0 2px 5px #000b)}.crest{width:100%;height:100%;display:block;object-fit:contain}
+main::after{content:"";position:absolute;right:-30px;bottom:-40px;width:min(78vh,720px);aspect-ratio:1;background:var(--art,none) no-repeat center/contain;opacity:.55;pointer-events:none;z-index:0}
+/* with artwork behind them, cards let a little of it through */
+html:not([data-art=""]) .card,html:not([data-art=""]) .csec .skel{background:var(--grain),linear-gradient(160deg,color-mix(in srgb,var(--card-a) 84%,transparent),color-mix(in srgb,var(--card-b) 84%,transparent))}
+html:not([data-art=""]) .clist{background:var(--grain),color-mix(in srgb,var(--surf) 86%,transparent)}
+body[data-v=lib] main::after{display:none}
+#hero{margin:0;text-align:center;flex:1;min-height:0;display:flex;flex-direction:column}#hero img{flex:1;min-height:0;width:100%;object-fit:contain;display:block;filter:drop-shadow(0 10px 24px #000a)}#hero figcaption{margin-top:2px;font:400 21px "IM Fell English",serif;color:var(--brass2)}
 main>section,aside{position:relative;z-index:1}
 .swt{display:flex;align-items:center;justify-content:space-between;gap:10px}.swt{padding-top:6px;padding-bottom:6px}.swc{width:44px;height:44px;flex:none;margin:-4px 0;filter:drop-shadow(0 2px 3px #0008)}
 #theme h3.group{margin:22px 0 4px}#theme .swg{margin-top:10px}
@@ -201,7 +207,7 @@ const THEMES=[
  grown("Races","orc","Orc","#f8935c","#7a1f12","orc"),grown("Races","undead","Undead","#9be564","#4b3a5e","undead"),grown("Races","tauren","Tauren","#4fd1c5","#7a4a22","tauren"),grown("Races","troll","Troll","#ff9d2e","#0f6b5c","troll"),
  ...PLAIN];
 // Painted emblem for a faction, class or race theme (original artwork made for this app, in ./art).
-const crest=art=>art?`<img class="crest" src="/art/${art}.webp" alt="">`:"";
+const crest=art=>art?`<img class="crest" src="/art/${art}-s.webp" alt="">`:"";
 const lum=h=>[1,3,5].reduce((s,i,n)=>s+parseInt(h.slice(i,i+2),16)*[.299,.587,.114][n],0);
 function themeVars(t){const darkBg=t.dark||t.onDarkBg,k="#000000",w="#ffffff";return {
  "--bg":t.bg,"--bg2":t.bg2,"--top-a":t.top,"--top-b":mixc(t.top,k,darkBg?.35:.05),"--top-c":mixc(t.top,k,darkBg?.6:.1),
@@ -226,7 +232,7 @@ let THEME=applyTheme(localStorage.theme);
   <div class="seg" role="group" aria-label="View"><button data-view="tiles" aria-pressed="true">Tiles</button><button data-view="list" aria-pressed="false">List</button></div>
   <button class="btn quiet" id="chk">Check for updates</button><button class="btn" id="upall" hidden>Update all</button></div>
  <div id="hints"></div><div id="tiles"></div><table id="list" hidden><thead><tr><th>Addon</th><th>Installed</th><th>Newest</th><th>Source</th><th>Size</th><th></th></tr></thead><tbody></tbody></table>
- </div><div id="conf" aria-live="polite"></div>
+ </div><div class="side"><div id="conf" aria-live="polite"></div><figure id="hero" hidden><img alt=""><figcaption></figcaption></figure></div>
 </section>
 <section id="cat">
  <div class="bar"><input class="field grow" id="q" placeholder="Search Forever addons, or paste a GitHub link" autocomplete="off"><button class="btn" id="go">Search</button>
@@ -346,7 +352,7 @@ $("#chk").onclick=async e=>{e.target.disabled=true;e.target.textContent="Checkin
 $("#upall").onclick=async e=>{e.target.disabled=true;const todo=S.addons.filter(a=>a.update&&!a.restricted),rest=S.addons.filter(a=>a.update&&a.restricted).length;let ok=0;
  for(const [i,a] of todo.entries()){toast(`Updating ${i+1} of ${todo.length}: ${a.name}…`);if(await act("install",a.key,`Updated ${a.name}`))ok++}
  toast(rest?`${ok} updated. ${rest} more are only offered on CurseForge: use “Get on CurseForge” on those tiles`:ok==todo.length?"Everything is up to date":`${ok} of ${todo.length} updated`,ok<todo.length);e.target.disabled=false};
-function show(v){$$("section").forEach(s=>s.classList.toggle("on",s.id==v));$$("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v==v));if(v!="lib")closePage();if(v=="cat"&&!$("#results").children.length)find()}
+function show(v){document.body.dataset.v=v;$$("section").forEach(s=>s.classList.toggle("on",s.id==v));$$("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v==v));if(v!="lib")closePage();if(v=="cat"&&!$("#results").children.length)find()}
 $("nav").onclick=e=>{const b=e.target.closest("[data-v]");b&&show(b.dataset.v)};
 /* catalog */
 /* catalog: landing (top 10 per category) / search results / full list of one category */
@@ -437,6 +443,7 @@ addEventListener("drop",async e=>{if(!hasFiles(e))return;e.preventDefault();drag
   prog(1);try{const r=await fetch("/api/upload",{method:"POST",headers:{"X-Token":T,"X-Name":encodeURIComponent(f.name)},body:f}),j=await r.json();if(!r.ok)throw new Error(j.error);S=j;show("lib");draw();toast(`Installed ${j.installed}`)}catch(x){toast(x.message,1)}finally{prog(-1)}}});
 setInterval(async()=>{if(busy||$("#dlg").open||document.hidden)return;try{const n=await api0("state");if(JSON.stringify(n)!=JSON.stringify(S)){S=n;draw()}}catch{}},20000);
 function themes(){const cur=THEMES.find(t=>t.id==THEME);$("#crest").innerHTML=crest(cur.art);$("#crest").hidden=!cur.art;$("#crest").title=cur.name;
+ $("#hero").hidden=!cur.art;if(cur.art){$("#hero img").src=`/art/${cur.art}.webp`;$("#hero figcaption").textContent=cur.name}
  const card=t=>`<button class="swo" data-theme-pick="${t.id}" aria-pressed="${t.id==THEME}">
  <span class="sw" style="${Object.entries(themeVars(t)).map(([k,v])=>k+":"+v).join(";")}"><span class="swt"><span>The Addon <i>Shelf</i></span>${t.art?`<span class="swc">${crest(t.art)}</span>`:""}</span>
  <span class="swb"><span class="tile"><span class="ico">${sigil("example-addon")}</span><span class="nm">Example addon</span><span class="ver">1.0.0</span><span class="st"><span>Source</span><span>12 MB</span><span class="ok">Up to date</span></span></span>
