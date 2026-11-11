@@ -1,136 +1,138 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The Addon Shelf</title>
+<title>The Addon Shelf for WoW Forever</title>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
-:root{--oak:#2b1d14;--oak2:#3a281b;--felt:#1d3b36;--felt2:#16302c;--vellum:#efe1c0;--vellum2:#d9c59a;--brass:#c9a04f;--brass2:#f0cd7c;--ember:#e0672f;--ink:#1c120c;--muted:#6b563a;
- --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E")}
+:root{--oak:#2b1d14;--oak2:#3a281b;--felt:#1d3b36;--felt2:#142b27;--vellum:#f1e4c4;--vellum2:#dccaa0;--paper:#f7ecd0;--brass:#c9a04f;--brass2:#f0cd7c;--ember:#e0672f;--ink:#1c120c;--muted:#6b563a;--line:#cdb986;--green:#2f6a3a;
+ --r:10px;--sh1:0 1px 0 #0006,0 6px 14px #0005;--sh2:0 3px 0 #0006,0 16px 30px #0008;
+ --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.3'/%3E%3C/svg%3E")}
 *{box-sizing:border-box}[hidden]{display:none!important}html,body{height:100%;margin:0}
-body{background:var(--grain),radial-gradient(120% 90% at 50% 0,#4a3322 0,var(--oak) 55%,#170f0a 100%);color:var(--vellum);font:17px/1.5 Alegreya,Georgia,serif;overflow:hidden}
-button,input,select{font:inherit;color:inherit}
-:focus-visible{outline:2px solid #fff3d6;outline-offset:2px}
-header{display:flex;align-items:center;gap:22px;padding:14px 32px 0;position:relative;z-index:1}
-h1{font:400 36px/1 "IM Fell English",serif;margin:0 0 12px;text-shadow:0 2px 0 #0008;white-space:nowrap}h1 i{color:var(--brass)}
-#status{margin:0 0 12px;font-size:15px;padding:4px 12px;border-radius:99px;border:1px solid #c9a04f55;color:var(--vellum2);display:flex;align-items:center;gap:8px}
-#status::before{content:"";width:9px;height:9px;border-radius:50%;background:#6fbf7a;box-shadow:0 0 8px #6fbf7a}
-#status.locked::before{background:var(--ember);box-shadow:0 0 8px var(--ember)}
-nav{display:flex;gap:4px;margin-left:auto;align-self:flex-end}
-nav button{font-weight:500;font-size:18px;color:var(--vellum2);background:#0003;border:1px solid #c9a04f44;border-bottom:0;padding:9px 22px 11px;border-radius:10px 10px 0 0;cursor:pointer;transition:background .15s}
-nav button:hover{background:#0006}nav button[aria-selected=true]{background:var(--felt);color:#fff3d6;border-color:var(--brass)}
-nav b{background:var(--ember);color:#fff;border-radius:99px;font-size:13px;padding:1px 8px;margin-left:6px}
-main{position:relative;z-index:1;height:calc(100% - 72px);background:var(--grain),linear-gradient(var(--felt),var(--felt2));border-top:2px solid var(--brass);box-shadow:inset 0 14px 30px #0007;display:flex}
-section{flex:1;overflow:auto;padding:24px 32px 70px;display:none;scrollbar-color:#c9a04f66 #0000}section.on{display:block}
-.bar{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
-.bar .grow{flex:1;min-width:220px}
-.field{padding:9px 14px;border-radius:8px;border:1px solid #c9a04f88;background:#0f2521;color:#fff3d6}
-.field::placeholder{color:#9db3ab}select.field{cursor:pointer}select.field option{background:#0f2521}
-.btn{font-weight:500;padding:8px 18px;border-radius:8px;border:1px solid #7a5a22;background:linear-gradient(#e7c471,#b98a37);color:var(--ink);cursor:pointer;box-shadow:0 2px 0 #5d4317,inset 0 1px 0 #fff6;white-space:nowrap;text-decoration:none;display:inline-block;transition:filter .15s}
-.btn:hover{filter:brightness(1.08)}.btn:active{transform:translateY(2px);box-shadow:none}.btn[disabled]{filter:grayscale(.7);opacity:.6;cursor:default}
-.btn.quiet{background:#0000;color:var(--vellum);border-color:#c9a04f88;box-shadow:none}.btn.quiet:hover{background:#fff1}
-.btn.danger{background:linear-gradient(#b5482a,#8a2f18);color:#ffe9dc;border-color:#5c1d0d;box-shadow:0 2px 0 #4a160a}
-.btn.sm{padding:4px 12px;font-size:15.5px}
-.seg{display:flex;border:1px solid #c9a04f88;border-radius:8px;overflow:hidden}.seg button{background:none;border:0;padding:8px 14px;cursor:pointer;color:var(--vellum2)}.seg button[aria-pressed=true]{background:var(--brass);color:var(--ink);font-weight:500}
-.hint{background:#0003;border:1px solid #c9a04f55;border-left:4px solid var(--brass);border-radius:6px;padding:10px 16px;margin:0 0 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}.hint span{flex:1;min-width:240px}
-/* list view */
-#list,.tbl{width:100%;border-collapse:collapse;background:var(--vellum);color:var(--ink);border-radius:8px;overflow:hidden;box-shadow:0 4px 0 #0005}
-#list th{text-align:left;font-weight:700;padding:10px 14px;background:#dcc999;border-bottom:1px solid #b9a577}
-#list td,.tbl td{padding:9px 14px;border-bottom:1px solid #d8c696;vertical-align:middle}#list tr:last-child td{border:0}
-#list tbody tr{cursor:pointer}#list tbody tr:hover{background:#f7ecd0}
-#list .chip{display:inline-block;width:10px;height:22px;border-radius:2px;margin-right:10px;vertical-align:middle}
-#list .new{color:#a8401f;font-weight:700}
-/* open page */
-aside{width:0;overflow:hidden;transition:width .35s ease;background:var(--grain),linear-gradient(90deg,#0003,#0000 30px),var(--vellum);color:var(--ink);box-shadow:-10px 0 30px #0008;flex:none}
-aside.on{width:410px}aside>div{width:410px;padding:28px 30px 40px;height:100%;overflow:auto}
-h2{font:400 31px/1.1 "IM Fell English",serif;margin:0 0 4px}
-.by{font-style:italic;color:#5d4a33;margin:0 0 16px}
-dl{display:grid;grid-template-columns:auto 1fr;gap:5px 16px;margin:16px 0;border-top:1px solid #b9a577;border-bottom:1px solid #b9a577;padding:12px 0}
-dt{color:var(--muted)}dd{margin:0;word-break:break-word}
-.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
-aside .btn.quiet,dialog .btn.quiet{color:var(--ink);border-color:#7a5a22}aside .btn.quiet:hover,dialog .btn.quiet:hover{background:#0001}
-.warn{color:#8a2f18;font-weight:500}
-/* catalog */
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
-.chips button{background:#0003;border:1px solid #c9a04f55;border-radius:99px;padding:4px 14px;cursor:pointer;color:var(--vellum2);font-size:15.5px}
-.chips button[aria-pressed=true]{background:var(--brass);color:var(--ink);border-color:var(--brass);font-weight:500}.chips small{opacity:.7;margin-left:5px}
-h3.group{font:400 25px "IM Fell English",serif;margin:26px 0 12px;display:flex;align-items:center;gap:14px;color:#fff3d6}h3.group::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#c9a04f99,#0000)}
-h3.group small{font:15px Alegreya,serif;color:#bcd0c8}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
-.card{display:grid;grid-template-columns:72px 1fr;gap:4px 14px;background:var(--grain),var(--vellum);color:var(--ink);padding:16px;border-radius:4px 14px 4px 14px;box-shadow:0 4px 0 #0005;cursor:pointer;text-align:left;border:0;transition:transform .15s,box-shadow .15s;align-content:start}
-.card:hover{transform:translateY(-3px);box-shadow:0 7px 0 #0005,0 0 0 2px var(--brass)}
-.card img,.card .ph{width:72px;height:72px;border-radius:6px;object-fit:cover;background:var(--oak2);grid-row:span 2;box-shadow:0 0 0 1px #0003}
-.card .ph{display:grid;place-items:center;font:400 34px "IM Fell English",serif;color:var(--brass)}
-.card h4{font:400 21px/1.15 "IM Fell English",serif;margin:0}
-.card p{margin:0;font-size:15.5px;color:#4b3b28;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.card .meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14.5px;color:#5d4a33;margin-top:8px;padding-top:8px;border-top:1px solid #cdb986;align-items:center}
-.card .meta .btn{margin-left:auto}
-.src{font-weight:700}.src.CurseForge{color:#b5482a}.src.GitHub{color:#2c4a6e}.src.WoWInterface{color:#1f5a4f}
-.skel{height:150px;border-radius:4px 14px 4px 14px;background:linear-gradient(100deg,#efe1c022 30%,#efe1c044 50%,#efe1c022 70%);background-size:200% 100%;animation:sh 1.2s linear infinite}@keyframes sh{to{background-position:-200% 0}}
-.empty{text-align:center;padding:50px 20px;color:#bcd0c8;font-size:19px}
-/* details dialog */
-dialog{border:0;padding:0;width:min(1000px,94vw);max-height:90vh;border-radius:6px 22px 6px 22px;background:var(--grain),var(--vellum);color:var(--ink);box-shadow:0 0 0 2px var(--brass),0 30px 80px #000c;overflow:hidden}
-dialog[open]{height:min(900px,90vh);display:flex;flex-direction:column;animation:pop .25s cubic-bezier(.3,1.3,.5,1)}@keyframes pop{from{transform:scale(.94);opacity:0}}
-dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
-.dhead{display:flex;gap:18px;padding:22px 26px 16px;align-items:flex-start;border-bottom:1px solid #b9a577}
-.dhead img{width:84px;height:84px;border-radius:8px;object-fit:cover;background:var(--oak2)}.dhead div{flex:1;min-width:0}
-.dhead .x{background:none;border:0;font-size:30px;line-height:1;cursor:pointer;color:var(--muted);padding:0 4px}
-.stats{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:8px;font-size:15.5px;color:#4b3b28}.stats b{font-weight:700;color:var(--ink)}
-.dbody{overflow-y:auto;overflow-x:hidden;padding:18px 26px 8px;flex:1 1 auto;min-height:0}.dhead,.dfoot{flex:none}
-.shot{position:relative;background:#120c08;border-radius:8px;overflow:hidden;aspect-ratio:16/9;display:grid;place-items:center}
-.shot img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in}
-.shot button{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;background:#000a;color:#fff;font-size:28px;cursor:pointer}.shot .p{left:0;border-radius:0 8px 8px 0}.shot .n{right:0;border-radius:8px 0 0 8px}
-.thumbs{display:flex;gap:8px;margin:10px 0 4px;overflow-x:auto;padding-bottom:4px}.thumbs img{height:58px;border-radius:4px;cursor:pointer;opacity:.6;border:2px solid #0000}.thumbs img.on{opacity:1;border-color:var(--ember)}
-#desc{width:100%;border:0;min-height:240px;margin-top:12px}
-.dfoot{display:flex;gap:10px;padding:14px 26px;border-top:1px solid #b9a577;background:#e3d2a8;align-items:center}.dfoot span{margin-right:auto;color:var(--muted);font-size:15px}
-#set{max-width:760px}#set p{max-width:64ch}#set a{color:var(--brass2)}#set ol{padding-left:22px;max-width:64ch}#set li{margin:6px 0}
-#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,90px);background:var(--ink);color:var(--vellum);border:1px solid var(--brass);padding:11px 22px;border-radius:8px;transition:transform .3s;max-width:80vw;z-index:99}
-#toast.on{transform:translate(-50%,0)}#toast.bad{border-color:var(--ember);color:#ffd9c7}
-nav button{white-space:nowrap}
-@media (max-width:1180px){#status{display:none}}
-@media (max-width:860px){aside.on{position:absolute;inset:0;width:100%;z-index:5}aside>div{width:100%}header{flex-wrap:wrap;gap:4px 14px}#status{display:none}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-
-/* --- polish pass --- */
-section.on{animation:fade .22s ease}@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+body{background:var(--grain),radial-gradient(120% 90% at 50% 0,#4a3322 0,var(--oak) 55%,#170f0a 100%);color:var(--vellum);font:16.5px/1.45 Alegreya,Georgia,serif;overflow:hidden}
+button,input,select{font:inherit;color:inherit}:focus-visible{outline:2px solid #fff3d6;outline-offset:2px}
 ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#c9a04f55;border-radius:9px;border:3px solid #0000;background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background:#c9a04faa;background-clip:padding-box}
-h1{display:flex;align-items:center;gap:12px}h1 svg{width:36px;height:36px;filter:drop-shadow(0 2px 2px #0008)}
-#prog{position:fixed;top:0;left:0;right:0;height:3px;z-index:100;background:linear-gradient(90deg,#0000,var(--brass2),var(--ember),#0000);background-size:50% 100%;background-repeat:no-repeat;opacity:0;transition:opacity .2s}
+/* header */
+header{display:flex;align-items:center;gap:18px;padding:10px 28px 0;height:68px}
+h1{font:400 30px/1 "IM Fell English",serif;margin:0 0 10px;display:flex;align-items:center;gap:12px;white-space:nowrap;text-shadow:0 2px 0 #0008}
+h1 svg{width:34px;height:34px;filter:drop-shadow(0 2px 2px #0008)}h1 i{color:var(--brass)}
+.realm{margin:0 0 10px;display:flex;align-items:center;gap:7px;font:500 14px Alegreya,serif;letter-spacing:.04em;color:var(--ink);background:linear-gradient(#f3d58a,#c9973f);border:1px solid #7a5a22;border-radius:6px;padding:3px 11px;box-shadow:0 1px 0 #0006,inset 0 1px 0 #fff7;white-space:nowrap}
+.realm::before{content:"";width:8px;height:8px;transform:rotate(45deg);background:var(--ember);box-shadow:0 0 0 1.5px #7a2d10}
+#status{margin:0 0 10px;font-size:14.5px;padding:3px 12px;border-radius:99px;border:1px solid #c9a04f44;color:var(--vellum2);display:flex;align-items:center;gap:8px;white-space:nowrap}
+#status::before{content:"";width:8px;height:8px;border-radius:50%;background:#6fbf7a;box-shadow:0 0 8px #6fbf7a}#status.locked::before{background:var(--ember);box-shadow:0 0 8px var(--ember)}
+nav{display:flex;gap:4px;margin-left:auto;align-self:flex-end}
+nav button{font-weight:500;font-size:17px;color:var(--vellum2);background:#0003;border:1px solid #c9a04f33;border-bottom:0;padding:9px 20px 10px;border-radius:10px 10px 0 0;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+nav button:hover{background:#0006;color:#fff3d6}nav button[aria-selected=true]{background:var(--felt);color:#fff3d6;border-color:var(--brass)}
+nav b{background:var(--ember);color:#fff;border-radius:99px;font-size:12.5px;padding:1px 7px;margin-left:7px}
+main{position:relative;height:calc(100% - 68px);background:var(--grain),linear-gradient(var(--felt),var(--felt2));border-top:2px solid var(--brass);box-shadow:inset 0 14px 30px #0007;display:flex}
+main>section{flex:1;overflow:auto;padding:22px 28px 60px;display:none;min-width:0}main>section.on{display:block;animation:fade .2s ease}@keyframes fade{from{opacity:0;transform:translateY(5px)}}
+#prog{position:fixed;top:0;left:0;right:0;height:3px;z-index:100;background:linear-gradient(90deg,#0000,var(--brass2),var(--ember),#0000) no-repeat;background-size:50% 100%;opacity:0;transition:opacity .2s}
 #prog.on{opacity:1;animation:slide 1.1s linear infinite}@keyframes slide{from{background-position:-50% 0}to{background-position:150% 0}}
-aside h2{display:flex;gap:12px;align-items:flex-start}aside h2::before{content:"";flex:none;width:12px;height:34px;border-radius:2px;background:var(--pc,#6e2a22);box-shadow:inset 0 0 0 1px #0005}
-.badge{display:inline-block;font-size:14.5px;padding:1px 10px;border-radius:99px;background:#2f5131;color:#eaf6e4;margin-bottom:10px}.badge.new{background:var(--ember);color:#fff}.badge.loose{background:#8d8168;color:#1c120c}
+/* controls */
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}.bar .grow{flex:1;min-width:200px}
+.field{height:40px;padding:0 14px;border-radius:8px;border:1px solid #c9a04f77;background:#0e231f;color:#fff3d6;transition:border-color .15s,box-shadow .15s}
+.field:focus{outline:0;border-color:var(--brass2);box-shadow:0 0 0 3px #c9a04f33}.field::placeholder{color:#8fa79f}select.field{cursor:pointer}select.field option{background:#0e231f}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:40px;font-weight:500;padding:0 18px;border-radius:8px;border:1px solid #7a5a22;background:linear-gradient(#ecca78,#bd8e3a);color:var(--ink);cursor:pointer;box-shadow:0 2px 0 #5d4317,inset 0 1px 0 #fff6;white-space:nowrap;text-decoration:none;transition:filter .15s,transform .08s}
+.btn:hover{filter:brightness(1.08)}.btn:active{transform:translateY(2px);box-shadow:inset 0 1px 0 #fff6}.btn[disabled],.btn[aria-disabled]{filter:grayscale(.7);opacity:.6;cursor:default}
+.btn.quiet{background:#0000;color:var(--vellum);border-color:#c9a04f77;box-shadow:none}.btn.quiet:hover{background:#ffffff14;filter:none}
+.btn.danger{background:linear-gradient(#bb4d2e,#8a2f18);color:#ffe9dc;border-color:#5c1d0d;box-shadow:0 2px 0 #4a160a,inset 0 1px 0 #fff3}
+.btn.sm{height:30px;padding:0 13px;font-size:15px;border-radius:7px}
+.seg{display:flex;height:40px;border:1px solid #c9a04f77;border-radius:8px;overflow:hidden}.seg button{background:none;border:0;padding:0 15px;cursor:pointer;color:var(--vellum2)}.seg button[aria-pressed=true]{background:var(--brass);color:var(--ink);font-weight:500}
+.hint{background:#0003;border:1px solid #c9a04f44;border-left:4px solid var(--brass);border-radius:8px;padding:9px 14px;margin:0 0 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.hint span{flex:1;min-width:220px}
+.note{color:#f0d9a8;margin:0}.empty{text-align:center;padding:50px 20px;color:#bcd0c8;font-size:19px}.warn{color:#8a2f18;font-weight:500}
 kbd{font:14px Alegreya,serif;border:1px solid #c9a04f88;border-bottom-width:2px;border-radius:4px;padding:0 6px;margin:0 2px}
-.card{height:100%;position:relative;grid-template-rows:auto 1fr auto}.card .meta{margin-top:auto}
-.card.have::after{content:"On your shelf";position:absolute;top:10px;right:-6px;background:#2f5131;color:#eaf6e4;font-size:13px;padding:1px 10px;border-radius:3px 0 0 3px;box-shadow:0 2px 0 #0004}
-.tabs{display:flex;gap:6px;margin:16px 0 0;border-bottom:1px solid #b9a577}.tabs button{background:none;border:0;border-bottom:3px solid #0000;padding:6px 14px;cursor:pointer;color:var(--muted);font-weight:500}.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--ember)}
-#drop{position:fixed;inset:14px;z-index:90;border:3px dashed var(--brass2);border-radius:18px;background:#0b0705dd;display:none;place-items:center;text-align:center;font:400 34px "IM Fell English",serif;color:#fff3d6}
-#drop.on{display:grid}#drop small{display:block;font:18px Alegreya,serif;color:var(--vellum2);margin-top:8px}
-#toast{display:flex;gap:10px;align-items:center;box-shadow:0 10px 30px #000a}#toast::before{content:"✓";color:#8fd49a;font-weight:700}#toast.bad::before{content:"!";color:var(--ember)}
-
-/* --- tiles --- */
-.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(276px,1fr));gap:16px}
-.tile{position:relative;display:grid;grid-template-columns:64px 1fr;grid-template-rows:46px 20px 28px;align-content:start;height:126px;gap:2px 14px;text-align:left;padding:14px;border:0;border-radius:12px;cursor:pointer;color:var(--ink);overflow:hidden;
- background:linear-gradient(160deg,#fff8e4,#e6d3a6);box-shadow:0 2px 0 #0007,0 8px 18px #0006,inset 0 1px 0 #fff9;
- transition:transform .2s cubic-bezier(.2,.9,.3,1.4),box-shadow .2s}
+.src{font-weight:700}.src.CurseForge{color:#b5482a}.src.GitHub{color:#2c4a6e}.src.WoWInterface{color:#1f5a4f}
+/* section headings */
+h3.group{font:400 24px/1.2 "IM Fell English",serif;margin:26px 0 12px;display:flex;align-items:center;gap:14px;color:#fff3d6}
+h3.group::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#c9a04f88,#0000);order:1}
+h3.group small{font:14.5px Alegreya,serif;color:#a9c0b7;white-space:nowrap}h3.group .btn{order:2}
+#tiles h3.group:first-child,.csec:first-child h3.group{margin-top:2px}
+/* installed tiles */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.tile{position:relative;display:grid;grid-template-columns:64px minmax(0,1fr);grid-template-rows:46px 20px 30px;align-content:start;height:128px;gap:2px 14px;text-align:left;padding:14px 14px 12px 18px;border:0;border-radius:var(--r);cursor:pointer;color:var(--ink);overflow:hidden;
+ background:var(--grain),linear-gradient(160deg,#fff8e4,#e8d6aa);box-shadow:var(--sh1),inset 0 1px 0 #fff9;transition:transform .2s cubic-bezier(.2,.9,.3,1.4),box-shadow .2s}
 .tile::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--c)}
-.tile:hover,.tile.sel{transform:translateY(-5px);box-shadow:0 4px 0 #0007,0 20px 36px #0009,0 0 0 2px var(--brass2),inset 0 1px 0 #fff9}
-.tile:active{transform:translateY(-1px) scale(.985)}
-.tile .ico{grid-row:span 3;align-self:start;width:64px;height:64px;border-radius:12px;display:grid;place-items:center;font:400 27px "IM Fell English",serif;color:#fff3d6;
- background:radial-gradient(circle at 30% 25%,#fff3,#0000 60%),var(--c);box-shadow:0 3px 8px #0007,inset 0 0 0 1px #0004;overflow:hidden;transition:transform .25s cubic-bezier(.2,.9,.3,1.6)}
-.tile .ico img{width:100%;height:100%;object-fit:cover}
-.tile:hover .ico{transform:rotate(-5deg) scale(1.1)}
-.tile .nm{align-self:start;font:400 20px/1.15 "IM Fell English",serif;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tile .ver{font-size:14.5px;color:#5d4a33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tile .ver b{color:#a8401f}
-.tile .st{display:flex;flex-wrap:nowrap;white-space:nowrap;align-items:center;gap:10px;font-size:14px;color:#5d4a33;align-self:end;min-width:0}.tile .st .btn{margin-left:auto}.tile .ok{margin-left:auto;color:#2f6a3a;font-weight:500}
-.tile.upd{box-shadow:0 2px 0 #0007,0 8px 18px #0006,0 0 0 2px var(--ember),inset 0 1px 0 #fff9}
+.tile:hover,.tile.sel{transform:translateY(-4px);box-shadow:var(--sh2),0 0 0 2px var(--brass2),inset 0 1px 0 #fff9}.tile:active{transform:translateY(-1px) scale(.985)}
+.tile .ico{grid-row:span 3;align-self:start;width:64px;height:64px;border-radius:12px;display:grid;place-items:center;font:400 26px "IM Fell English",serif;color:#fff3d6;background:radial-gradient(circle at 30% 25%,#fff3,#0000 60%),var(--c);box-shadow:0 3px 8px #0007,inset 0 0 0 1px #0004;overflow:hidden;transition:transform .25s cubic-bezier(.2,.9,.3,1.6)}
+.tile .ico img{width:100%;height:100%;object-fit:cover}.tile:hover .ico{transform:rotate(-5deg) scale(1.08)}
+.tile .nm{align-self:start;font:400 19.5px/1.17 "IM Fell English",serif;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .ver{font-size:14px;color:#5d4a33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tile .ver b{color:#a8401f}
+.tile .st{display:flex;white-space:nowrap;align-items:center;gap:10px;font-size:14px;color:#5d4a33;align-self:end;min-width:0}.tile .st .btn,.tile .ok{margin-left:auto}.tile .ok{color:var(--green);font-weight:500}
+.tile.upd{box-shadow:var(--sh1),0 0 0 2px var(--ember),inset 0 1px 0 #fff9}
 .tile.upd::after{content:"";position:absolute;top:0;right:14px;width:14px;height:22px;background:var(--ember);clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%);animation:glow 1.6s ease-in-out infinite alternate}
 @keyframes glow{to{filter:brightness(1.4) drop-shadow(0 0 5px #ff9a4f)}}
-#tiles.first .tile{animation:rise .45s backwards cubic-bezier(.2,.9,.3,1.2);animation-delay:calc(var(--i)*24ms)}@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.97)}}
+#tiles.first .tile{animation:rise .4s backwards cubic-bezier(.2,.9,.3,1.2);animation-delay:calc(var(--i)*22ms)}@keyframes rise{from{opacity:0;transform:translateY(16px) scale(.97)}}
 .tile.busy{pointer-events:none}.tile.busy .ico{animation:work 1s ease-in-out infinite}@keyframes work{50%{transform:scale(.88) rotate(8deg);filter:brightness(1.3)}}
 .tile.busy::after,.card.busy::after{content:"";position:absolute;inset:0;width:auto;height:auto;clip-path:none;background:linear-gradient(100deg,#0000 30%,#fff9 50%,#0000 70%);background-size:220% 100%;animation:sh 1s linear infinite}
-.tile.done{animation:done .9s ease-out}@keyframes done{0%{box-shadow:0 0 0 0 #6fbf7a,0 8px 18px #0006;transform:scale(1.04)}100%{box-shadow:0 0 0 18px #6fbf7a00,0 8px 18px #0006}}
+.tile.done{animation:done .9s ease-out}@keyframes done{0%{box-shadow:0 0 0 0 #6fbf7a,var(--sh1);transform:scale(1.04)}100%{box-shadow:0 0 0 18px #6fbf7a00,var(--sh1)}}
 .tile.gone{animation:gone .28s forwards ease-in}@keyframes gone{to{opacity:0;transform:scale(.85)}}
-#tiles h3.group:first-child{margin-top:4px}
+/* tables */
+.tbl,#list{width:100%;border-collapse:separate;border-spacing:0;background:var(--grain),var(--vellum);color:var(--ink);border-radius:var(--r);box-shadow:var(--sh1);overflow:hidden}
+.tbl th,#list th{text-align:left;font-weight:700;font-size:14.5px;padding:10px 14px;background:#dfcc9c;border-bottom:1px solid #b9a577;white-space:nowrap}
+.tbl td,#list td{padding:9px 14px;border-bottom:1px solid #dccb9b;vertical-align:middle}.tbl tr:last-child td,#list tr:last-child td{border-bottom:0}
+#list tbody tr,.clist tbody tr{cursor:pointer;transition:background .12s}#list tbody tr:hover,.clist tbody tr:hover{background:var(--paper)}
+#list .chip{display:inline-block;width:10px;height:22px;border-radius:2px;margin-right:10px;vertical-align:middle}#list .new{color:#a8401f;font-weight:700}
+.clist{table-layout:fixed}.clist td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.clist td.who{white-space:normal}
+.clist th.c-by{width:200px}.clist th.num{width:110px}.clist th.c-up{width:120px}.clist th.c-ver{width:210px}.clist th.c-act{width:132px}.clist .cell{display:flex;align-items:center;gap:12px;min-width:0}
+.clist .cell>span:last-child{display:flex;flex-direction:column;min-width:0}.clist b{font:400 18.5px/1.2 "IM Fell English",serif}
+.clist small{color:#5d4a33;font-size:14px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.clist .rank{flex:none;width:26px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}.clist .num{text-align:right;font-variant-numeric:tabular-nums}
+.clist tr.busy{opacity:.6}.clist td:last-child{text-align:right}
+.mini{width:42px;height:42px;border-radius:8px;object-fit:cover;flex:none;background:var(--oak2);box-shadow:0 0 0 1px #0003}div.ph.mini{display:grid;place-items:center;color:var(--brass);font:400 20px "IM Fell English",serif}
+@media (max-width:1400px){.clist .c-ver{display:none}}@media (max-width:1180px){.clist .c-by{display:none}}
+/* open page */
+aside{width:0;overflow:hidden;transition:width .3s ease;background:var(--grain),linear-gradient(90deg,#0003,#0000 30px),var(--vellum);color:var(--ink);box-shadow:-10px 0 30px #0008;flex:none}
+aside.on{width:400px}aside>div{width:400px;padding:26px 28px 40px;height:100%;overflow:auto}
+h2{font:400 29px/1.12 "IM Fell English",serif;margin:0 0 4px}
+aside h2{display:flex;gap:12px;align-items:flex-start}aside h2::before{content:"";flex:none;width:10px;height:32px;border-radius:2px;background:var(--pc,#6e2a22);box-shadow:inset 0 0 0 1px #0005}
+.by{font-style:italic;color:#5d4a33;margin:0 0 14px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:14px 0;border-top:1px solid #b9a577;border-bottom:1px solid #b9a577;padding:12px 0}dt{color:var(--muted)}dd{margin:0;word-break:break-word}
+.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+aside .btn.quiet,dialog .btn.quiet{color:var(--ink);border-color:#7a5a22}aside .btn.quiet:hover,dialog .btn.quiet:hover{background:#0001}
+.badge{display:inline-block;font-size:14px;padding:1px 10px;border-radius:99px;background:var(--green);color:#eaf6e4;margin-bottom:10px}.badge.new{background:var(--ember);color:#fff}.badge.loose{background:#8d8168;color:#1c120c}
+/* catalog */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chips button{height:30px;background:#0003;border:1px solid #c9a04f55;border-radius:99px;padding:0 14px;cursor:pointer;color:var(--vellum2);font-size:15px}
+.chips button[aria-pressed=true]{background:var(--brass);color:var(--ink);border-color:var(--brass);font-weight:500}.chips small{opacity:.7;margin-left:5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.card{position:relative;display:grid;grid-template-columns:68px minmax(0,1fr);grid-template-rows:48px 44px 1fr;gap:6px 14px;height:188px;text-align:left;padding:14px;border:0;border-radius:var(--r);cursor:pointer;color:var(--ink);overflow:hidden;
+ background:var(--grain),linear-gradient(160deg,#fff8e4,#e8d6aa);box-shadow:var(--sh1),inset 0 1px 0 #fff9;transition:transform .2s cubic-bezier(.2,.9,.3,1.4),box-shadow .2s}
+.card:hover{transform:translateY(-4px);box-shadow:var(--sh2),0 0 0 2px var(--brass2),inset 0 1px 0 #fff9}.card:active{transform:translateY(-1px) scale(.99)}
+.card .th{position:relative;grid-row:span 2;width:68px;height:68px}.card .th img,.card .th .ph{width:68px;height:68px;border-radius:12px;object-fit:cover;background:var(--oak2);box-shadow:0 3px 8px #0006,inset 0 0 0 1px #0004;transition:transform .25s cubic-bezier(.2,.9,.3,1.6)}
+.card:hover .th img,.card:hover .th .ph{transform:rotate(-4deg) scale(1.06)}
+.ph{display:grid;place-items:center;font:400 30px "IM Fell English",serif;color:var(--brass)}
+.card .tick{position:absolute;right:-6px;bottom:-6px;width:24px;height:24px;border-radius:50%;background:var(--green);border:2px solid #f3e6c4;display:grid;place-items:center;color:#fff;font:700 13px/1 sans-serif;box-shadow:0 2px 4px #0006}
+.card .tt{min-width:0;display:flex;flex-direction:column;justify-content:center}
+.card .nm{font:400 20px/1.15 "IM Fell English",serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .who{font-size:14px;color:#5d4a33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .sum{margin:0;font-size:15px;line-height:1.4;color:#4b3b28;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .meta{grid-column:1/-1;align-self:end;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:end;border-top:1px solid var(--line);padding-top:8px;font-size:14px;color:#5d4a33}
+.card .stats{grid-column:1/-1;display:flex;gap:14px;white-space:nowrap;overflow:hidden}.card .v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:center}
+.skel{height:188px;border-radius:var(--r);background:linear-gradient(100deg,#efe1c018 30%,#efe1c038 50%,#efe1c018 70%);background-size:200% 100%;animation:sh 1.2s linear infinite}@keyframes sh{to{background-position:-200% 0}}
+/* details dialog */
+dialog{border:0;padding:0;width:min(1000px,94vw);max-height:90vh;border-radius:14px;background:var(--grain),var(--vellum);color:var(--ink);box-shadow:0 0 0 2px var(--brass),0 30px 80px #000c;overflow:hidden}
+dialog[open]{height:min(900px,90vh);display:flex;flex-direction:column;animation:pop .22s cubic-bezier(.3,1.3,.5,1)}@keyframes pop{from{transform:scale(.95);opacity:0}}
+dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
+.dhead,.dfoot{flex:none}.dhead{display:flex;gap:18px;padding:22px 26px 16px;align-items:flex-start;border-bottom:1px solid #b9a577}
+.dhead img{width:84px;height:84px;border-radius:12px;object-fit:cover;background:var(--oak2);box-shadow:0 3px 8px #0006}.dhead div{flex:1;min-width:0}
+.dhead .x{background:none;border:0;font-size:30px;line-height:1;cursor:pointer;color:var(--muted);padding:0 4px}
+.stats{display:flex;flex-wrap:wrap;gap:6px 24px;margin:8px 0 0;font-size:15px;color:#4b3b28}.stats b{font-weight:700;color:var(--ink)}
+.dbody{overflow-y:auto;overflow-x:hidden;padding:18px 26px 8px;flex:1 1 auto;min-height:0}
+.shot{position:relative;background:#120c08;border-radius:10px;overflow:hidden;aspect-ratio:16/9;display:grid;place-items:center}.shot img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in}
+.shot button{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;background:#000a;color:#fff;font-size:28px;cursor:pointer}.shot .p{left:0;border-radius:0 8px 8px 0}.shot .n{right:0;border-radius:8px 0 0 8px}
+.thumbs{display:flex;gap:8px;margin:10px 0 4px;overflow-x:auto;padding-bottom:4px}.thumbs img{height:58px;border-radius:6px;cursor:pointer;opacity:.6;border:2px solid #0000}.thumbs img.on{opacity:1;border-color:var(--ember)}
+.tabs{display:flex;gap:6px;margin:16px 0 0;border-bottom:1px solid #b9a577}.tabs button{background:none;border:0;border-bottom:3px solid #0000;padding:6px 14px;cursor:pointer;color:var(--muted);font-weight:500}.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--ember)}
+#desc{width:100%;border:0;min-height:240px;margin-top:12px}
+.dfoot{display:flex;gap:10px;padding:14px 26px;border-top:1px solid #b9a577;background:#e5d4aa;align-items:center}.dfoot>span:first-child{margin-right:auto;color:var(--muted);font-size:15px}
+/* settings, feedback */
+#set{max-width:760px}#set p,#set ol{max-width:64ch}#set a{color:var(--brass2)}#set ol{padding-left:22px}#set li{margin:6px 0}#set h2{color:#fff3d6}
+#drop{position:fixed;inset:14px;z-index:90;border:3px dashed var(--brass2);border-radius:18px;background:#0b0705dd;display:none;place-items:center;text-align:center;font:400 32px "IM Fell English",serif;color:#fff3d6}
+#drop.on{display:grid}#drop small{display:block;font:17px Alegreya,serif;color:var(--vellum2);margin-top:8px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,90px);display:flex;gap:10px;align-items:center;background:var(--ink);color:var(--vellum);border:1px solid var(--brass);padding:10px 20px;border-radius:10px;transition:transform .3s;max-width:80vw;z-index:99;box-shadow:0 10px 30px #000a}
+#toast::before{content:"✓";color:#8fd49a;font-weight:700}#toast.bad::before{content:"!";color:var(--ember)}#toast.on{transform:translate(-50%,0)}#toast.bad{border-color:var(--ember);color:#ffd9c7}
+@media (max-width:1180px){#status{display:none}}
+@media (max-width:860px){aside.on{position:absolute;inset:0;width:100%;z-index:5}aside>div{width:100%}h1 span{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
 <div id="prog"></div><div id="drop"><div>Drop the addon’s .zip to install it<small>An addon already on your shelf is updated in place and keeps a backup</small></div></div>
-<header><h1><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="50" width="48" height="6" rx="1" fill="#80583a"/><rect x="13" y="16" width="10" height="34" rx="1" fill="#6e2a22"/><rect x="25" y="10" width="12" height="40" rx="1" fill="#27405c"/><rect x="39" y="20" width="11" height="30" rx="1" fill="#7a4a1c"/><g fill="#f0cd7c"><rect x="13" y="21" width="10" height="3"/><rect x="25" y="16" width="12" height="3"/><rect x="39" y="25" width="11" height="3"/><rect x="13" y="42" width="10" height="3"/><rect x="25" y="42" width="12" height="3"/><rect x="39" y="42" width="11" height="3"/></g><path d="M29 4h4v12l-2-2-2 2z" fill="#e0672f"/></svg><span>The Addon <i>Shelf</i></span></h1><p id="status"></p>
+<header><h1><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="50" width="48" height="6" rx="1" fill="#80583a"/><rect x="13" y="16" width="10" height="34" rx="1" fill="#6e2a22"/><rect x="25" y="10" width="12" height="40" rx="1" fill="#27405c"/><rect x="39" y="20" width="11" height="30" rx="1" fill="#7a4a1c"/><g fill="#f0cd7c"><rect x="13" y="21" width="10" height="3"/><rect x="25" y="16" width="12" height="3"/><rect x="39" y="25" width="11" height="3"/><rect x="13" y="42" width="10" height="3"/><rect x="25" y="42" width="12" height="3"/><rect x="39" y="42" width="11" height="3"/></g><path d="M29 4h4v12l-2-2-2 2z" fill="#e0672f"/></svg><span>The Addon <i>Shelf</i></span></h1><p class="realm" title="Only addons built for the World of Warcraft: Forever client are shown and managed">WoW Forever</p><p id="status"></p>
 <nav role="tablist"><button role="tab" data-v="lib" aria-selected="true">My addons<b id="badge" hidden></b></button><button role="tab" data-v="cat">Catalog</button><button role="tab" data-v="set">Settings</button></nav></header>
 <main>
 <section id="lib">
@@ -140,7 +142,7 @@ kbd{font:14px Alegreya,serif;border:1px solid #c9a04f88;border-bottom-width:2px;
  <div id="hints"></div><div id="tiles"></div><table id="list" hidden><thead><tr><th>Addon</th><th>Installed</th><th>Newest</th><th>Source</th><th>Size</th><th></th></tr></thead><tbody></tbody></table>
 </section>
 <section id="cat">
- <div class="bar"><input class="field grow" id="q" placeholder="Search the catalog, or paste a GitHub link" autocomplete="off"><button class="btn" id="go">Search</button>
+ <div class="bar"><input class="field grow" id="q" placeholder="Search Forever addons, or paste a GitHub link" autocomplete="off"><button class="btn" id="go">Search</button>
   <select class="field" id="sort" aria-label="Sort"><option value="cat">By category, most popular first</option><option value="pop">Most popular</option><option value="new">Recently updated</option><option value="name">Name</option></select></div>
  <div class="chips" id="srcs"></div><div id="catnote"></div><div id="results"></div></section>
 <section id="set"><h2 style="color:#fff3d6">Settings</h2>
@@ -183,11 +185,12 @@ function draw(first){
  const auto=S.addons.filter(a=>a.update&&!a.restricted).length;$("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!auto;$("#upall").textContent=`Update all ${auto}`;
  $("#hints").innerHTML=(S.has_cf_key?"":`<p class="hint"><span>CurseForge is not connected, so ${S.addons.filter(a=>a.source=="CurseForge").length} of your addons cannot be checked for updates.</span><button class="btn sm" data-go="set">Connect CurseForge</button></p>`)
   +(S.new_downloads||[]).filter(d=>!seen.has(d.path)).map(d=>`<p class="hint"><span>New download: <b>${esc(d.name)}</b> (${mb(d.size)}, ${ago(d.when)})</span><button class="btn sm" data-f="${esc(d.path)}">Install it</button><button class="btn sm quiet" data-x="${esc(d.path)}">Not an addon</button></p>`).join("")
+  +((S.unmanaged||[]).length?`<p class="hint"><span>${S.unmanaged.length} folder${S.unmanaged.length>1?"s":""} in your AddOns folder ${S.unmanaged.length>1?"are":"is"} not built for WoW Forever and ${S.unmanaged.length>1?"are":"is"} left alone: ${S.unmanaged.map(esc).join(", ")}</span></p>`:"")
   +(loose?`<p class="hint"><span>${loose} addons have no source recorded, so they cannot be checked for updates. Open one and choose “Find in catalog” to link it.</span></p>`:"");
  $("#tiles").hidden=view!="tiles";$("#list").hidden=view!="list";$$(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view==view));
  const shown=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)),groups={};shown.forEach(a=>(groups[a.category]??=[]).push(a));let i=0;
  $("#tiles").className=first?"first":"";
- $("#tiles").innerHTML=shown.length?(S.categories||[]).filter(c=>groups[c]).map(c=>`<h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div>`).join(""):`<p class="empty">No addon matches “${esc($("#filter").value)}”.</p>`;
+ $("#tiles").innerHTML=shown.length?[...(S.categories||[]).filter(c=>groups[c]),...Object.keys(groups).filter(c=>!(S.categories||[]).includes(c))].map(c=>`<h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div>`).join(""):`<p class="empty">No addon matches “${esc($("#filter").value)}”.</p>`;
  $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
  $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent="Addon folder: "+(S.addons_dir||"");
  if(sel)openPage(sel)}
@@ -220,29 +223,60 @@ $("#chk").onclick=async e=>{e.target.disabled=true;e.target.textContent="Checkin
 $("#upall").onclick=async e=>{e.target.disabled=true;const todo=S.addons.filter(a=>a.update&&!a.restricted),rest=S.addons.filter(a=>a.update&&a.restricted).length;let ok=0;
  for(const [i,a] of todo.entries()){toast(`Updating ${i+1} of ${todo.length}: ${a.name}…`);if(await act("install",a.key,`Updated ${a.name}`))ok++}
  toast(rest?`${ok} updated. ${rest} more are only offered on CurseForge: use “Get on CurseForge” on those tiles`:ok==todo.length?"Everything is up to date":`${ok} of ${todo.length} updated`,ok<todo.length);e.target.disabled=false};
-function show(v){$$("section").forEach(s=>s.classList.toggle("on",s.id==v));$$("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v==v));if(v!="lib")closePage();if(v=="cat"&&!R.length)find()}
+function show(v){$$("section").forEach(s=>s.classList.toggle("on",s.id==v));$$("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v==v));if(v!="lib")closePage();if(v=="cat"&&!$("#results").children.length)find()}
 $("nav").onclick=e=>{const b=e.target.closest("[data-v]");b&&show(b.dataset.v)};
 /* catalog */
-async function find(){$("#results").innerHTML=`<div class="grid">${'<div class="skel"></div>'.repeat(8)}</div>`;$("#catnote").innerHTML="";
+/* catalog: landing (top 10 per category) / search results / full list of one category */
+let mode="landing",CATS=null,TOP={},LIST=null;
+const have=x=>S.addons.some(a=>a.key==x.key)||!!(S.also||{})[x.key],mine=k=>(S.also||{})[k]||k;
+const rowOf=k=>[...R,...Object.values(TOP).flatMap(t=>t.rows||[]),...(LIST?LIST.rows:[])].find(x=>x.key==k);
+const thumb=(x,c="")=>x.thumb?`<img class="${c}" src="${esc(x.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;ph ${c}&quot;>${esc(x.name[0])}</div>'">`:`<div class="ph ${c}">${esc(x.name[0])}</div>`;
+const actBtn=x=>have(x)?`<span class="btn sm danger" role="button" data-u="${esc(x.key)}">Uninstall</span>`:`<span class="btn sm" role="button" data-i="${esc(x.key)}">Install</span>`;
+function card(x){return `<button class="card" data-k="${esc(x.key)}"><span class="th">${thumb(x)}${have(x)?'<i class="tick" title="Installed">✓</i>':""}</span>
+ <span class="tt"><span class="nm">${esc(x.name)}</span><span class="who">by ${esc(x.author||"unknown")}</span></span><p class="sum">${esc(x.summary||"")}</p>
+ <span class="meta"><span class="stats"><span class="src ${x.source}">${x.source}</span><span>${compact.format(x.downloads)} ${x.stars?"stars":"downloads"}</span>${x.updated?`<span>Updated ${ago(x.updated)}</span>`:""}</span>
+ <span class="v">${x.version?esc(x.version):""}</span>${actBtn(x)}</span></button>`}
+function catUI(){$("#sort").hidden=mode!="search";$("#srcs").hidden=mode!="search";if(mode!="search")$("#catnote").innerHTML=""}
+async function find(){if(!$("#q").value.trim())return landing();mode="search";catUI();$("#results").innerHTML=`<div class="grid">${'<div class="skel"></div>'.repeat(8)}</div>`;
  try{const r=await api("search?q="+encodeURIComponent($("#q").value));R=r.results;srcOn="All";
   $("#catnote").innerHTML=r.errors.map(m=>`<p class="hint"><span>${esc(m)}</span>${/key/.test(m)?'<button class="btn sm" data-go="set">Open Settings</button>':""}</p>`).join("");paint()}
  catch(e){$("#results").innerHTML=`<p class="empty">${esc(e.message)}</p>`}}
-function card(x){return `<button class="card${x.installed?" have":""}" data-k="${esc(x.key)}">${x.thumb?`<img src="${esc(x.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=ph>${esc(x.name[0])}</div>'">`:`<div class="ph">${esc(x.name[0])}</div>`}
- <h4>${esc(x.name)}</h4><p>${esc(x.summary||"by "+x.author)}</p>
- <span class="meta"><span class="src ${x.source}">${x.source}</span><span>${compact.format(x.downloads)} ${x.stars?"stars":"downloads"}</span>${x.updated?`<span>Updated ${ago(x.updated)}</span>`:""}${x.version?`<span>${esc(x.version.slice(0,28))}</span>`:""}
- <span class="btn sm" role="button" data-i="${esc(x.key)}" ${x.installed?'aria-disabled="true" style="filter:grayscale(.7);opacity:.6"':""}>${x.installed?"On the shelf":"Install"}</span></span></button>`}
 function paint(){const counts={All:R.length};R.forEach(r=>counts[r.source]=(counts[r.source]||0)+1);
  $("#srcs").innerHTML=Object.entries(counts).map(([s,n])=>`<button aria-pressed="${s==srcOn}" data-s="${s}">${s=="All"?"All sources":s}<small>${n}</small></button>`).join("");
- const rows=R.filter(r=>srcOn=="All"||r.source==srcOn),mode=$("#sort").value,pop=(a,b)=>b.downloads-a.downloads;
+ const rows=R.filter(r=>srcOn=="All"||r.source==srcOn),m=$("#sort").value,pop=(a,b)=>b.downloads-a.downloads;
  if(!rows.length){$("#results").innerHTML=`<p class="empty">Nothing matches. Try a shorter search, or paste the addon’s GitHub link.</p>`;return}
- if(mode=="cat"){const g={};rows.forEach(r=>(g[r.category]??=[]).push(r));
+ if(m=="cat"){const g={};rows.forEach(r=>(g[r.category]??=[]).push(r));
   $("#results").innerHTML=Object.entries(g).sort((a,b)=>b[1].reduce((s,r)=>s+r.downloads,0)-a[1].reduce((s,r)=>s+r.downloads,0)).map(([c,l])=>`<h3 class="group">${esc(c)}<small>${l.length}</small></h3><div class="grid">${l.sort(pop).map(card).join("")}</div>`).join("")}
- else $("#results").innerHTML=`<div class="grid">${rows.sort(mode=="pop"?pop:mode=="new"?(a,b)=>b.updated-a.updated:(a,b)=>a.name.localeCompare(b.name)).map(card).join("")}</div>`}
+ else $("#results").innerHTML=`<div class="grid">${rows.sort(m=="pop"?pop:m=="new"?(a,b)=>b.updated-a.updated:(a,b)=>a.name.localeCompare(b.name)).map(card).join("")}</div>`}
+const secBody=id=>{const t=TOP[id];return !t||t.loading?'<div class="skel"></div>'.repeat(5):t.error?`<p class="note">${esc(t.error)}</p>`:t.rows.map(card).join("")};
+async function landing(){mode="landing";LIST=null;catUI();
+ if(!CATS){$("#results").innerHTML=`<div class="grid">${'<div class="skel"></div>'.repeat(8)}</div>`;try{CATS=(await api("categories")).categories}catch(e){$("#results").innerHTML=`<p class="empty">${esc(e.message)}</p>`;return}}
+ if(mode!="landing")return;
+ $("#results").innerHTML=CATS.map(c=>`<div class="csec" data-c="${c.id}"${TOP[c.id]&&!TOP[c.id].loading&&!TOP[c.id].error&&!TOP[c.id].rows.length?" hidden":""}><h3 class="group">${esc(c.name)}<small>${TOP[c.id]?.total?"top 10 of "+TOP[c.id].total.toLocaleString():""}</small><span class="btn sm quiet" role="button" data-all="${c.id}">View all</span></h3><div class="grid">${secBody(c.id)}</div></div>`).join("");
+ near()}
+// fetch a category's top 10 only once it is on screen (or about to be)
+function near(){if(mode!="landing")return;const h=$("#cat").getBoundingClientRect().bottom+400;$$(".csec:not([hidden])").forEach(x=>{if(x.getBoundingClientRect().top<h)loadTop(x.dataset.c)})}
+let nearT=0;$("#cat").addEventListener("scroll",()=>{clearTimeout(nearT);nearT=setTimeout(near,120)},{passive:true});addEventListener("resize",near);
+async function loadTop(id){if(TOP[id])return;TOP[id]={loading:true};   // each category is fetched once, when it scrolls into view
+ try{TOP[id]=await api0(`browse?cat=${id}&size=10`)}catch(e){TOP[id]={error:e.message,rows:[]};setTimeout(()=>delete TOP[id],30000)}
+ const sec=$(`.csec[data-c="${id}"]`);if(!sec||mode!="landing")return;const t=TOP[id];
+ if(!t.error&&!t.rows.length){sec.hidden=true;near();return}sec.querySelector(".grid").innerHTML=secBody(id);sec.querySelector("small").textContent=t.total?"top 10 of "+t.total.toLocaleString():""}
+async function openList(id){mode="list";catUI();LIST={id,name:CATS.find(c=>c.id==id).name,rows:[],total:0};paintList();$("#cat").scrollTop=0;await more()}
+async function more(){const L=LIST;try{const r=await api(`browse?cat=${L.id}&size=50&index=${L.rows.length}`);if(LIST!==L)return;L.rows.push(...r.rows);L.total=r.total;L.end=r.rows.length<50;paintList()}catch(e){toast(e.message,1)}}
+function paintList(){const L=LIST;$("#results").innerHTML=`<div class="bar"><button class="btn quiet" data-back>Back to all categories</button><h3 class="group" style="margin:0;flex:1;min-width:0">${esc(L.name)}<small>${L.total?L.total.toLocaleString()+" addons, most downloaded first":"Loading…"}</small></h3></div>
+ <table class="tbl clist"><thead><tr><th>Addon</th><th class="c-by">Author</th><th class="num">Downloads</th><th class="c-up">Updated</th><th class="c-ver">Version</th><th class="c-act"></th></tr></thead><tbody>${L.rows.map((x,i)=>`<tr data-k="${esc(x.key)}"><td class="who"><div class="cell"><span class="rank">${i+1}</span>${thumb(x,"mini")}<span><b>${esc(x.name)}</b><small>${esc(x.summary)}</small></span></div></td><td class="c-by">${esc(x.author)}</td><td class="num">${compact.format(x.downloads)}</td><td>${ago(x.updated)}</td><td class="c-ver">${esc((x.version||"").slice(0,26))}</td><td>${actBtn(x)}</td></tr>`).join("")}</tbody></table>
+ ${L.rows.length&&!L.end&&L.rows.length<L.total?`<p style="text-align:center;margin-top:18px"><button class="btn" data-more>Show 50 more</button></p>`:""}`}
+function recat(){if(mode=="landing")landing();else if(mode=="list")paintList();else paint()}
 $("#go").onclick=find;$("#q").onkeydown=e=>e.key=="Enter"&&find();$("#sort").onchange=paint;$("#catnote").onclick=e=>e.target.dataset.go&&show(e.target.dataset.go);
 $("#srcs").onclick=e=>{const b=e.target.closest("[data-s]");if(b){srcOn=b.dataset.s;paint()}};
-async function install(key,name,btn){if(btn){btn.textContent="Installing…";btn.setAttribute("aria-disabled","true");btn.closest(".card")?.classList.add("busy")}
- try{S=await api("install",{key});const r=R.find(x=>x.key==key);if(r)r.installed=true;draw();paint();toast(`Installed ${name}`);return true}catch(x){if(x.browser){const ok=await viaBrowser(x.browser,name);if(ok){const r=R.find(z=>z.key==key);if(r)r.installed=true;paint()}btn?.closest(".card")?.classList.remove("busy");if(btn&&!ok){btn.textContent="Install";btn.removeAttribute("aria-disabled")}return ok}toast(x.message,1);if(btn){btn.textContent="Install";btn.removeAttribute("aria-disabled");btn.closest(".card")?.classList.remove("busy")}}}
-$("#results").onclick=e=>{const i=e.target.closest("[data-i]"),c=e.target.closest(".card");if(i){e.stopPropagation();if(!i.hasAttribute("aria-disabled")){const r=R.find(x=>x.key==i.dataset.i);install(r.key,r.name,i)}}else if(c)info(c.dataset.k)};
+async function install(key,name,btn){const host=btn?.closest(".card,tr");if(btn){btn.textContent="Installing…";btn.setAttribute("aria-disabled","true");host?.classList.add("busy")}
+ try{S=await api("install",{key});draw();recat();toast(`Installed ${name}`);return true}
+ catch(x){if(x.browser){const ok=await viaBrowser(x.browser,name);recat();return ok}toast(x.message,1);if(btn){btn.textContent="Install";btn.removeAttribute("aria-disabled");host?.classList.remove("busy")}}}
+async function uninstall(key,name,btn){if(btn&&!btn.dataset.sure){btn.dataset.sure=1;btn.textContent="Click again to uninstall";setTimeout(()=>{if(btn.isConnected){delete btn.dataset.sure;btn.textContent="Uninstall"}},4000);return}
+ try{S=await api("remove",{key:mine(key)});if(sel==mine(key))closePage();draw();recat();toast(`Uninstalled ${name}. A copy is kept in case you want it back.`);return true}catch(x){toast(x.message,1)}}
+$("#results").onclick=e=>{const t=e.target,i=t.closest("[data-i]"),u=t.closest("[data-u]"),k=t.closest("[data-k]");
+ if(t.closest("[data-all]"))openList(t.closest("[data-all]").dataset.all);else if(t.closest("[data-back]"))landing();else if(t.closest("[data-more]")){t.disabled=true;more()}
+ else if(i){if(!i.hasAttribute("aria-disabled")){const r=rowOf(i.dataset.i);install(r.key,r.name,i)}}else if(u){const r=rowOf(u.dataset.u);uninstall(r.key,r.name,u)}else if(k)info(k.dataset.k)};
 /* details dialog */
 function shot(i){si=(i+shots.length)%shots.length;$("#big").src=shots[si];$$(".thumbs img").forEach((t,j)=>t.classList.toggle("on",j==si))}
 async function info(key){const d=$("#dlg");d.innerHTML=`<div class="dbody"><p class="empty" style="color:var(--muted)">Fetching details…</p></div>`;d.showModal();
@@ -253,7 +287,7 @@ async function info(key){const d=$("#dlg");d.innerHTML=`<div class="dbody"><p cl
  <div class="dbody">${shots.length?`<div class="shot"><img id="big" alt="Screenshot of ${esc(x.name)}">${shots.length>1?'<button class="p" data-d="prev" aria-label="Previous screenshot">‹</button><button class="n" data-d="next" aria-label="Next screenshot">›</button>':""}</div>${shots.length>1?`<div class="thumbs">${shots.map((s,i)=>`<img src="${esc(s)}" data-t="${i}" alt="" loading="lazy">`).join("")}</div>`:""}`:""}
   <div class="tabs" role="tablist"><button role="tab" data-tab="html" aria-selected="true">About</button>${x.changelog?'<button role="tab" data-tab="changelog" aria-selected="false">What’s new</button>':""}</div>
   <iframe id="desc" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" title="Description"></iframe></div>
- <div class="dfoot"><span>${shots.length?shots.length+" screenshots":"No screenshots published"}</span>${x.page?`<a class="btn quiet" href="${esc(x.page)}" target="_blank" rel="noopener">Open on ${x.source}</a>`:""}<button class="btn" data-d="install" ${x.installed?"disabled":""}>${x.installed?"On the shelf":"Install"}</button></div>`;
+ <div class="dfoot"><span>${shots.length?shots.length+" screenshots":"No screenshots published"}</span>${x.page?`<a class="btn quiet" href="${esc(x.page)}" target="_blank" rel="noopener">Open on ${x.source}</a>`:""}${have(x)?`<span style="margin:0;color:#2f6a3a;font-weight:500">Installed</span><button class="btn danger" data-d="remove">Uninstall</button>`:`<button class="btn" data-d="install">Install</button>`}</div>`;
  d.dataset.key=x.key;d.dataset.name=x.name;if(shots.length)shot(0);
  d._x=x;fill("html")}
 function fill(which){const x=$("#dlg")._x,f=$("#desc");$$(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab==which));
@@ -261,7 +295,8 @@ function fill(which){const x=$("#dlg")._x,f=$("#desc");$$(".tabs button").forEac
  f.srcdoc=`<base target="_blank"><style>body{font:16px/1.55 Georgia,serif;color:#1c120c;margin:0;overflow-wrap:anywhere}img,video,iframe{max-width:100%;height:auto}a{color:#8a2f18}pre,code{white-space:pre-wrap;background:#0001;padding:2px 4px}h1,h2,h3{font-weight:400;line-height:1.2}table{border-collapse:collapse}td,th{border:1px solid #b9a577;padding:4px 8px}</style>${x[which]||"<p><i>The source has no description for this addon.</i></p>"}`;
  f.onload=e=>{try{e.target.style.height=Math.min(4000,e.target.contentDocument.documentElement.scrollHeight+20)+"px"}catch{e.target.style.height="600px"}}}
 $("#dlg").onclick=async e=>{const d=$("#dlg"),a=e.target.dataset.d;if(e.target.dataset.tab)return fill(e.target.dataset.tab);if(e.target==d||a=="close")d.close();else if(a=="prev")shot(si-1);else if(a=="next")shot(si+1);else if(e.target.dataset.t)shot(+e.target.dataset.t);else if(e.target.id=="big")open(shots[si],"_blank","noopener");
- else if(a=="install"){e.target.disabled=true;e.target.textContent="Installing…";if(await install(d.dataset.key,d.dataset.name))e.target.textContent="On the shelf";else{e.target.disabled=false;e.target.textContent="Install"}}};
+ else if(a=="install"){e.target.disabled=true;e.target.textContent="Installing…";if(await install(d.dataset.key,d.dataset.name))d.close();else{e.target.disabled=false;e.target.textContent="Install"}}
+ else if(a=="remove"){if(await uninstall(d.dataset.key,d.dataset.name,e.target))d.close()}};
 $("#dlg").onkeydown=e=>{if(shots.length>1){if(e.key=="ArrowLeft")shot(si-1);if(e.key=="ArrowRight")shot(si+1)}};
 $("#savekey").onclick=async()=>{const k=$("#key").value.trim();if(!k)return toast("Paste the key first",1);try{await api("key",{key:k});$("#key").value="";S=await api("state");R=[];draw();toast("Key saved")}catch(e){toast(e.message,1)}};
 $("#scan").onclick=async()=>{try{const r=await api("downloads");$("#files").innerHTML=r.files.length?`<table class="tbl" style="margin-bottom:20px"><tbody>${r.files.map(f=>`<tr><td>${esc(f.name)}</td><td>${mb(f.size)}</td><td>${ago(f.when)}</td><td><button class="btn sm" data-f="${esc(f.path)}">Install</button></td></tr>`).join("")}</tbody></table>`:`<p>No .zip files in Downloads.</p>`}catch(e){toast(e.message,1)}};

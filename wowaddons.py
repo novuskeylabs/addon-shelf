@@ -24,6 +24,7 @@ SEED = {"DialogueUI": "gh:Peterodox/YUI-Dialogue", "AllTheThings": "gh:ATTWoWAdd
         "DynamicCam": "cf:101120", "GearQuestForever": "cf:1698950", "Leatrix_Plus": "cf:94855", "OpenMap": "cf:1735937",
         "TalentsForeverBook": "cf:1700435", "WhatsTraining": "cf:324944"}
 LOCK = threading.Lock()
+SRC_CAT = {}        # key -> the source's own category for that addon (session only)
 LIVE = {}           # key -> {latest, latest_id, page, update, error, restricted}; never written to disk
 FETCH = None        # set by the application window: FETCH(url) -> Path of the file CurseForge's download page delivered
 
@@ -104,11 +105,20 @@ def read_toc(folder):
     d = addons_dir() / folder
     tocs = sorted(d.glob("*.toc"), key=lambda p: (p.stem != folder, len(p.name)))
     if tocs:
-        for line in tocs[0].read_text(errors="ignore").splitlines():
+        for line in tocs[0].read_text(encoding="utf-8-sig", errors="ignore").splitlines():
             m = re.match(r"##\s*([^:]+?)\s*:\s*(.*)", line)
             if m:
                 out.setdefault(m.group(1).lower(), re.sub(r"\|c[0-9a-fA-F]{8}|\|r", "", m.group(2)).strip())
     return out
+
+
+def forever_ok(path):
+    """Does this addon folder declare support for the Forever client (interface 160xx, or a Forever .toc)?"""
+    for t in Path(path).glob("*.toc"):
+        m = re.search(r"(?mi)^##\s*Interface\s*:\s*(.*)$", t.read_text(encoding="utf-8-sig", errors="ignore"))
+        if (m and re.search(r"\b160\d\d\b", m.group(1))) or re.search(r"[_-]forever\.toc$", t.name, re.I):
+            return True
+    return False
 
 
 def folder_size(names):
@@ -170,6 +180,14 @@ def icon_png(key):
     return out.read_bytes()
 
 
+def shelf_categories():
+    """Category names for the installed view: CurseForge's own when it is connected, otherwise the built-in guesses."""
+    try:
+        return [c["name"] for c in categories() if c["id"] != "wowi"] + ["Other"] if cf_key() else CATEGORIES
+    except Exception:
+        return CATEGORIES
+
+
 def group_folders():
     """GearQuestForever_DRUID belongs to GearQuestForever: {parent: [folders]}"""
     names = sorted(p.name for p in addons_dir().iterdir() if p.is_dir())
@@ -194,7 +212,7 @@ def sync():
                     st["addons"][target] = old
         owned = {f for a in st["addons"].values() for f in a["folders"]}
         for parent, folders in groups.items():
-            if parent in owned:
+            if parent in owned or not memo("forever", parent, lambda p=parent: forever_ok(addons_dir() / p)):
                 continue
             t = toc(parent)
             key = SEED.get(parent) or (t.get("x-curse-project-id") and "cf:" + t["x-curse-project-id"]) or "local:" + parent
@@ -221,10 +239,11 @@ def cf_key():
     return CF_KEY.read_text().strip() if CF_KEY.exists() else ""
 
 
-def cf(path, body=None):
+def cf(path, body=None, full=False):
     try:
-        return http("https://api.curseforge.com/v1" + path, {"x-api-key": cf_key(), "Accept": "application/json",
-                                                              "Content-Type": "application/json"}, body=body)["data"]
+        r = http("https://api.curseforge.com/v1" + path, {"x-api-key": cf_key(), "Accept": "application/json",
+                                                           "Content-Type": "application/json"}, body=body)
+        return r if full else r["data"]
     except urllib.error.HTTPError as e:
         if e.code == 403:
             raise RuntimeError("CurseForge has not approved your key yet. Until it does, download the addon file from CurseForge and drop it on this window") from None
@@ -296,7 +315,7 @@ def cf_newest(mod):
         raise RuntimeError("No Forever version published")
     f = max(idx, key=lambda f: f["fileId"])
     return {"version": re.sub(r"\.zip$", "", f["filename"]), "id": str(f["fileId"]), "page": mod["links"]["websiteUrl"],
-            "name": mod["name"], "restricted": mod.get("allowModDistribution") is False}
+            "name": mod["name"], "restricted": mod.get("allowModDistribution") is False, "category": cf_category(mod)}
 
 
 def is_current(a, new):
@@ -322,9 +341,23 @@ def epoch(iso):
 
 
 # one catalog row per source, same shape everywhere
-def row_cf(m):
+def cf_category(m):
+    """The project's primary CurseForge category; a sub-category (Class > Warrior) counts as its parent."""
     cats = m.get("categories") or []
-    cat = next((c["name"] for c in cats if c.get("id") == m.get("primaryCategoryId")), cats[0]["name"] if cats else "Other")
+    c = next((c for c in cats if c.get("id") == m.get("primaryCategoryId")), cats[0] if cats else None)
+    if not c:
+        return "Other"
+    if c.get("parentCategoryId") not in (None, c.get("classId")):
+        try:
+            names = {x["id"]: x["name"] for x in memo_time("cats", 12 * 3600, lambda: cf("/categories?gameId=1"))}
+            return names.get(c["parentCategoryId"], c["name"])
+        except Exception:
+            pass
+    return c["name"]
+
+
+def row_cf(m):
+    cat = cf_category(m)
     ver = next((f.get("filename", "") for f in m.get("latestFilesIndexes") or [] if f.get("gameVersionTypeId") == CF_FOREVER), "")
     return {"key": f"cf:{m['id']}", "source": "CurseForge", "name": m["name"], "summary": m.get("summary", ""),
             "author": ", ".join(a["name"] for a in m.get("authors", [])[:2]), "downloads": int(m.get("downloadCount") or 0),
@@ -394,8 +427,37 @@ def details(key):
             r["changelog"] = out.stdout if out.returncode == 0 else ""
     except Exception:
         pass                                        # release notes are a nicety; the details still show
-    r["installed"] = key in load()["addons"]
     return r
+
+
+# The same addon under another source's id (installed from GitHub, listed on CurseForge).
+ALSO = {"cf:267285": "gh:ATTWoWAddon/AllTheThings", "cf:989270": "gh:Peterodox/YUI-Dialogue"}
+FIRST = ["Quests & Leveling", "Map & Minimap", "Bags & Inventory", "Action Bars", "Unit Frames", "Combat", "Boss Encounters",
+         "Auction & Economy", "Professions", "Class", "Tooltip", "Chat & Communication", "Buffs & Debuffs", "PvP"]
+
+
+def categories():
+    """CurseForge's top-level WoW categories (kept for the session), most used first, then WoWInterface."""
+    if not cf_key():
+        return [{"id": "wowi", "name": "From WoWInterface"}]
+    cats = memo_time("cats", 12 * 3600, lambda: cf("/categories?gameId=1"))
+    top = [c for c in cats if c.get("parentCategoryId") == c.get("classId") and not c.get("isClass")]
+    top.sort(key=lambda c: (FIRST.index(c["name"]) if c["name"] in FIRST else len(FIRST), c["name"]))
+    return [{"id": str(c["id"]), "name": c["name"]} for c in top] + [{"id": "wowi", "name": "From WoWInterface"}]
+
+
+def browse(cat, index, size):
+    """One page of a category, most downloaded first: {rows, total}."""
+    index, size = max(0, int(index)), min(50, max(1, int(size)))
+
+    def page():
+        if cat == "wowi":
+            rows = sorted((row_wowi(a) for a in wowi_list() if wowi_forever(a)), key=lambda r: -r["downloads"])
+            return {"rows": rows[index:index + size], "total": len(rows)}
+        r = cf(f"/mods/search?gameId=1&categoryId={int(cat)}&gameVersionTypeId={CF_FOREVER}&sortField=6&sortOrder=desc"
+               f"&index={index}&pageSize={size}", full=True)
+        return {"rows": [row_cf(m) for m in r["data"]], "total": r["pagination"]["totalCount"]}
+    return memo_time(("browse", cat, index, size), 900, page)      # paging back and forth costs no new requests
 
 
 def search(q):
@@ -421,17 +483,12 @@ def search(q):
     def s_gh():
         if not q:
             return []
-        m = re.search(r"github\.com/([\w.-]+/[\w.-]+)", q)
-        repos = [gh("repos/" + m.group(1).removesuffix(".git"))] if m else gh(
-            "search/repositories?per_page=12&q=" + urllib.parse.quote(q + " wow addon in:name,description,topics"))["items"]
-        return [row_gh(r) for r in repos]
+        m = re.search(r"github\.com/([\w.-]+/[\w.-]+)", q)   # a pasted link only; it is checked for Forever support on install
+        return [row_gh(gh("repos/" + m.group(1).removesuffix(".git")))] if m else []
 
     threads = [threading.Thread(target=run, args=a) for a in (("CurseForge", s_cf), ("WoWInterface", s_wowi), ("GitHub", s_gh))]
     [t.start() for t in threads]
     [t.join() for t in threads]
-    have = set(load()["addons"])
-    for r in out:
-        r["installed"] = r["key"] in have
     return {"results": out, "errors": errors}
 
 
@@ -470,6 +527,13 @@ def unpack(zpath, dest):
     raise RuntimeError("No addon folders found in the download")
 
 
+def unpack_forever(zpath, dest):
+    found = unpack(zpath, dest)
+    if not any(forever_ok(d) for d in found):
+        raise RuntimeError("This file is not built for WoW Forever, so it was not installed")
+    return found
+
+
 def backup(key, folders):
     slot = BACKUPS / re.sub(r"[^\w.-]", "_", key) / time.strftime("%Y%m%d-%H%M%S")
     slot.mkdir(parents=True)
@@ -492,7 +556,7 @@ def install(key):
         zpath = Path(tmp) / "a.zip"
         data = http(new["url"], raw=True)
         zpath.write_bytes(data)
-        found = unpack(zpath, Path(tmp) / "x")
+        found = unpack_forever(zpath, Path(tmp) / "x")
         names = [d.name for d in found]
         with LOCK:
             st = load()
@@ -548,7 +612,7 @@ def install_zip(z):
         raise RuntimeError("Close World of Warcraft first: it overwrites addon settings on exit")
     CACHE.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=CACHE) as tmp:
-        found = unpack(z, Path(tmp) / "x")
+        found = unpack_forever(z, Path(tmp) / "x")
         names = sorted(d.name for d in found)
         with LOCK:
             st = load()
@@ -605,6 +669,8 @@ def check():
     def note(key, a, new):
         LIVE[key] = {"latest": new["version"], "latest_id": new["id"], "page": new["page"], "update": not is_current(a, new),
                      "restricted": bool(new.get("restricted")), "error": ""}
+        if new.get("category"):
+            SRC_CAT[key] = new["category"]
 
     def one(key, a):
         try:
@@ -619,7 +685,11 @@ def check():
         try:                                            # all projects in a single request
             if not cf_key():
                 raise RuntimeError("Add a CurseForge key in Settings to check this addon")
-            mods = {f"cf:{m['id']}": m for m in cf("/mods", {"modIds": [int(k[3:]) for k in cfs]})}
+            twins = {v: k for k, v in ALSO.items() if v in st["addons"]}       # GitHub installs that CurseForge also lists
+            mods = {f"cf:{m['id']}": m for m in cf("/mods", {"modIds": [int(k[3:]) for k in [*cfs, *twins.values()]]})}
+            for mine, theirs in twins.items():                                  # borrow CurseForge's category for them
+                if theirs in mods:
+                    SRC_CAT[mine] = cf_category(mods[theirs])
             for k, a in cfs.items():
                 try:
                     if k not in mods:
@@ -636,16 +706,19 @@ def check():
 
 def view(st=None):
     st = st or sync()
+    names = shelf_categories()
     rows = [{"key": k, "source": {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "No source"}[k.split(":")[0]],
              "size": folder_size(a["folders"]), "notes": toc(a["folders"][0]).get("notes", ""),
-             "category": a.get("category") or guess_category(toc(a["folders"][0]), a["name"]), "icon": memo("icon", a["folders"][0], lambda k=k: bool(icon_png(k))),
+             "category": a.get("category") or SRC_CAT.get(k) or guess_category(toc(a["folders"][0]), a["name"]), "icon": memo("icon", a["folders"][0], lambda k=k: bool(icon_png(k))),
              "can_rollback": any((BACKUPS / re.sub(r"[^\w.-]", "_", k)).glob("*")), **a, **LIVE.get(k, {})}
             for k, a in st["addons"].items()]
     rows.sort(key=lambda r: r["name"].lower())
     fresh = [d for d in downloads() if time.time() - d["when"] < 1800 and d["size"] > 0
              and not any(Path(d["path"] + e).exists() for e in (".crdownload", ".part"))]
     return {"addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
-            "new_downloads": fresh, "categories": CATEGORIES}
+            "new_downloads": fresh, "categories": names,
+            "unmanaged": sorted(p for p in group_folders() if not any(p in a["folders"] for a in st["addons"].values())),
+            "also": {k: v for k, v in ALSO.items() if v in st["addons"] and k not in st["addons"]}}
 
 
 # ---------- window ----------
@@ -678,6 +751,10 @@ class H(BaseHTTPRequestHandler):
                 r = check()
             elif route == "search":
                 r = search(q.get("q", [""])[0])
+            elif route == "categories":
+                r = {"categories": categories()}
+            elif route == "browse":
+                r = browse(q["cat"][0], q.get("index", ["0"])[0], q.get("size", ["10"])[0])
             elif route == "details":
                 r = details(q["key"][0])
             elif route == "downloads":
@@ -689,7 +766,7 @@ class H(BaseHTTPRequestHandler):
                 name = install_upload(body["name"], body["data"])
                 r = {**view(), "installed": name}
             elif route == "category":
-                if body["category"] not in CATEGORIES:
+                if body["category"] not in [*shelf_categories(), *CATEGORIES]:
                     raise RuntimeError("Unknown category")
                 with LOCK:
                     st = load()
@@ -783,7 +860,7 @@ def main():
 
     view = QWebEngineView()
     view.setPage(Page(profile, view))
-    view.setWindowTitle("The Addon Shelf")
+    view.setWindowTitle("The Addon Shelf for WoW Forever")
     view.resize(1500, 950)
     view.load(QUrl(f"http://127.0.0.1:{srv.server_address[1]}/"))
     view.show()
@@ -900,6 +977,12 @@ def selftest():
             pass
     assert bbcode('[b]Hi[/b] <x>\n[url="https://a.b/c"]go[/url][size=3]z[/size]') == '<b>Hi</b> &lt;x&gt;<br><a href="https://a.b/c">go</a>z'
     assert epoch("1970-01-02T00:00:00Z") == 86400
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        (t / "A.toc").write_text("\ufeff## Interface: 120105, 16001\n", encoding="utf-8")
+        assert forever_ok(t)
+        (t / "A.toc").write_text("## Interface: 120105\n")
+        assert not forever_ok(t)
     assert guess_category({"category": "Quests"}, "Attune") == "Quests & Leveling"
     assert guess_category({"notes": "Auction house helper"}, "X") == "Auctions & Economy"
     assert guess_category({}, "Zzz") == "Other"
