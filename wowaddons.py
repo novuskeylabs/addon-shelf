@@ -135,7 +135,10 @@ def icon_png(key):
         try:
             from PIL import Image
             out.parent.mkdir(parents=True, exist_ok=True)
-            im = Image.open(src).convert("RGBA")
+            if src.stat().st_size > 8 << 20:                    # an icon, not an arbitrary image
+                return None
+            Image.MAX_IMAGE_PIXELS = 4096 * 4096
+            im = Image.open(src, formats=["BLP", "TGA", "PNG", "JPEG"]).convert("RGBA")
             im.thumbnail((160, 160))
             im.save(out, "PNG")
         except Exception:
