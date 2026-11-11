@@ -24,6 +24,7 @@ SEED = {"DialogueUI": "gh:Peterodox/YUI-Dialogue", "AllTheThings": "gh:ATTWoWAdd
         "DynamicCam": "cf:101120", "GearQuestForever": "cf:1698950", "Leatrix_Plus": "cf:94855", "OpenMap": "cf:1735937",
         "TalentsForeverBook": "cf:1700435", "WhatsTraining": "cf:324944"}
 LOCK = threading.Lock()
+LIVE = {}           # key -> {latest, latest_id, page, update, error, restricted}; never written to disk
 FETCH = None        # set by the application window: FETCH(url) -> Path of the file CurseForge's download page delivered
 
 
@@ -60,8 +61,9 @@ def save(st):
     tmp.replace(STATE)
 
 
-def http(url, headers=None, raw=False):
-    req = urllib.request.Request(url, headers={"User-Agent": UA, **(headers or {})})
+def http(url, headers=None, raw=False, body=None):
+    req = urllib.request.Request(url, headers={"User-Agent": UA, **(headers or {})},
+                                 data=json.dumps(body).encode() if body is not None else None)
     with urllib.request.urlopen(req, timeout=40) as r:
         data = r.read(MAX_ZIP + 1)          # never buffer more than the cap
     if len(data) > MAX_ZIP:
@@ -74,7 +76,30 @@ def norm(s):
 
 
 # ---------- local folders ----------
+_MEMO = {}
+
+
+def stamp(folder):
+    """Changes whenever the addon folder or its .toc is replaced."""
+    d = addons_dir() / folder
+    try:
+        return (d.stat().st_mtime_ns, max((t.stat().st_mtime_ns for t in d.glob("*.toc")), default=0))
+    except OSError:
+        return None
+
+
+def memo(kind, folder, fn):
+    key, now = (kind, folder), stamp(folder)
+    if _MEMO.get(key, (None,))[0] != now:
+        _MEMO[key] = (now, fn())
+    return _MEMO[key][1]
+
+
 def toc(folder):
+    return memo("toc", folder, lambda: read_toc(folder))
+
+
+def read_toc(folder):
     out = {}
     d = addons_dir() / folder
     tocs = sorted(d.glob("*.toc"), key=lambda p: (p.stem != folder, len(p.name)))
@@ -87,11 +112,9 @@ def toc(folder):
 
 
 def folder_size(names):
-    total = 0
-    for n in names:
-        for root, _, files in os.walk(addons_dir() / n):
-            total += sum(os.path.getsize(os.path.join(root, f)) for f in files)
-    return total
+    def walk(n):
+        return sum(os.path.getsize(os.path.join(root, f)) for root, _, files in os.walk(addons_dir() / n) for f in files)
+    return sum(memo("size", n, lambda n=n: walk(n)) for n in names)
 
 
 CATEGORIES = ["Quests & Leveling", "Map & Navigation", "Collections", "Professions", "Auctions & Economy", "Class & Talents",
@@ -180,6 +203,8 @@ def sync():
             else:
                 st["addons"][key] = {"name": t.get("title") or parent, "folders": folders, "version": t.get("version", "")}
         for key, a in list(st["addons"].items()):
+            for stale in ("latest", "page", "update", "error"):                 # source data lives in memory only
+                a.pop(stale, None)
             a["folders"] = [f for f in a["folders"] if (addons_dir() / f).is_dir()]
             if not a["folders"]:
                 del st["addons"][key]
@@ -196,9 +221,10 @@ def cf_key():
     return CF_KEY.read_text().strip() if CF_KEY.exists() else ""
 
 
-def cf(path):
+def cf(path, body=None):
     try:
-        return http("https://api.curseforge.com/v1" + path, {"x-api-key": cf_key(), "Accept": "application/json"})["data"]
+        return http("https://api.curseforge.com/v1" + path, {"x-api-key": cf_key(), "Accept": "application/json",
+                                                              "Content-Type": "application/json"}, body=body)["data"]
     except urllib.error.HTTPError as e:
         if e.code == 403:
             raise RuntimeError("CurseForge has not approved your key yet. Until it does, download the addon file from CurseForge and drop it on this window") from None
@@ -214,6 +240,17 @@ def gh(path):
 
 
 def wowi_list():
+    return memo_time("wowi", 6 * 3600, wowi_fetch)
+
+
+def memo_time(name, ttl, fn):
+    hit = _MEMO.get(name)
+    if not hit or time.time() - hit[0] > ttl:
+        _MEMO[name] = hit = (time.time(), fn())
+    return hit[1]
+
+
+def wowi_fetch():
     f = CACHE / "wowinterface.json"
     if not f.exists() or time.time() - f.stat().st_mtime > 6 * 3600:
         CACHE.mkdir(parents=True, exist_ok=True)
@@ -250,6 +287,16 @@ def latest(key):
         return {"version": d["UIVersion"], "id": d["UIVersion"], "url": d["UIDownload"],
                 "page": d.get("UIFileInfoURL", ""), "name": d["UIName"]}
     raise RuntimeError("This addon has no known source yet. Find it in the catalog to link it.")
+
+
+def cf_newest(mod):
+    """Newest Forever file of a project from the data a search or batch lookup already carries."""
+    idx = [f for f in mod.get("latestFilesIndexes") or [] if f.get("gameVersionTypeId") == CF_FOREVER]
+    if not idx:
+        raise RuntimeError("No Forever version published")
+    f = max(idx, key=lambda f: f["fileId"])
+    return {"version": re.sub(r"\.zip$", "", f["filename"]), "id": str(f["fileId"]), "page": mod["links"]["websiteUrl"],
+            "name": mod["name"], "restricted": mod.get("allowModDistribution") is False}
 
 
 def is_current(a, new):
@@ -452,6 +499,7 @@ def install(key):
             # an addon installed by hand earlier is adopted: same folders, new owner
             clash = [k for k, a in st["addons"].items() if k != key and set(a["folders"]) & set(names)]
             prev = st["addons"].get(key, {}).get("folders", [])
+            prev_cat = st["addons"].get(key, {}).get("category")
             backup(key, sorted(set(prev) | set(names) | {f for k in clash for f in st["addons"][k]["folders"]}))
             for k in clash:
                 del st["addons"][k]
@@ -459,9 +507,10 @@ def install(key):
                 shutil.move(d, addons_dir() / d.name)
             t = toc(names[0])
             st["addons"][key] = {"name": t.get("title") or new["name"], "folders": sorted(names),
-                                 "version": t.get("version") or new["version"], "remote_id": new["id"], "page": new["page"],
-                                 "latest": new["version"], "update": False}
+                                 "version": t.get("version") or new["version"], "remote_id": new["id"],
+                                 **({"category": prev_cat} if prev_cat else {})}
             save(st)
+    LIVE[key] = {"latest": new["version"], "latest_id": new["id"], "page": new["page"], "update": False, "error": ""}
     return st["addons"][key]
 
 
@@ -512,10 +561,10 @@ def install_zip(z):
             for d in found:
                 shutil.move(d, addons_dir() / d.name)
             t = toc(min(names, key=len))
-            st["addons"][key] = {**old, "name": t.get("title") or names[0], "folders": names, "version": t.get("version", ""),
-                                 "update": False}
+            st["addons"][key] = {**old, "name": t.get("title") or names[0], "folders": names, "version": t.get("version", "")}
             st["addons"][key].pop("remote_id", None)
             save(st)
+    LIVE.pop(key, None)
     return st["addons"][key]["name"]
 
 
@@ -545,25 +594,43 @@ def rollback(key):
         slot.rmdir()
         t = toc(names[0])
         st["addons"][key] = {"name": t.get("title") or names[0], "folders": sorted(names), "version": t.get("version", ""),
-                             "update": False}
+                             **({"category": st["addons"][key]["category"]} if st["addons"].get(key, {}).get("category") else {})}
         save(st)
+    LIVE.pop(key, None)
 
 
 def check():
     st = sync()
 
+    def note(key, a, new):
+        LIVE[key] = {"latest": new["version"], "latest_id": new["id"], "page": new["page"], "update": not is_current(a, new),
+                     "restricted": bool(new.get("restricted")), "error": ""}
+
     def one(key, a):
         try:
-            new = latest(key)
-            a.update(latest=new["version"], page=new["page"], update=not is_current(a, new), error="")
+            note(key, a, latest(key))
         except Exception as e:
-            a.update(update=False, error=str(e))
+            LIVE[key] = {"update": False, "error": str(e)}
 
-    ts = [threading.Thread(target=one, args=kv) for kv in st["addons"].items() if not kv[0].startswith("local:")]
-    [t.start() for t in ts]
-    [t.join() for t in ts]
-    with LOCK:
-        save(st)
+    cfs = {k: a for k, a in st["addons"].items() if k.startswith("cf:")}
+    others = [threading.Thread(target=one, args=kv) for kv in st["addons"].items() if kv[0].split(":")[0] in ("gh", "wowi")]
+    [t.start() for t in others]
+    if cfs:
+        try:                                            # all projects in a single request
+            if not cf_key():
+                raise RuntimeError("Add a CurseForge key in Settings to check this addon")
+            mods = {f"cf:{m['id']}": m for m in cf("/mods", {"modIds": [int(k[3:]) for k in cfs]})}
+            for k, a in cfs.items():
+                try:
+                    if k not in mods:
+                        raise RuntimeError("CurseForge no longer lists this addon")
+                    note(k, a, cf_newest(mods[k]))
+                except Exception as e:
+                    LIVE[k] = {"update": False, "error": str(e)}
+        except Exception as e:
+            for k in cfs:
+                LIVE[k] = {"update": False, "error": str(e)}
+    [t.join() for t in others]
     return view(st)
 
 
@@ -571,8 +638,9 @@ def view(st=None):
     st = st or sync()
     rows = [{"key": k, "source": {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "No source"}[k.split(":")[0]],
              "size": folder_size(a["folders"]), "notes": toc(a["folders"][0]).get("notes", ""),
-             "category": a.get("category") or guess_category(toc(a["folders"][0]), a["name"]), "icon": bool(icon_png(k)),
-             "can_rollback": any((BACKUPS / re.sub(r"[^\w.-]", "_", k)).glob("*")), **a} for k, a in st["addons"].items()]
+             "category": a.get("category") or guess_category(toc(a["folders"][0]), a["name"]), "icon": memo("icon", a["folders"][0], lambda k=k: bool(icon_png(k))),
+             "can_rollback": any((BACKUPS / re.sub(r"[^\w.-]", "_", k)).glob("*")), **a, **LIVE.get(k, {})}
+            for k, a in st["addons"].items()]
     rows.sort(key=lambda r: r["name"].lower())
     fresh = [d for d in downloads() if time.time() - d["when"] < 1800 and d["size"] > 0
              and not any(Path(d["path"] + e).exists() for e in (".crdownload", ".part"))]
@@ -640,17 +708,6 @@ class H(BaseHTTPRequestHandler):
             elif route in ("install", "remove", "rollback"):
                 {"install": install, "remove": remove, "rollback": rollback}[route](body["key"])
                 r = view()
-            elif route == "update_all":
-                failed, browser = {}, []
-                for k, a in load()["addons"].items():
-                    if a.get("update"):
-                        try:
-                            install(k)
-                        except NeedsBrowser as e:
-                            browser.append({**e.info, "name": a["name"]})
-                        except Exception as e:
-                            failed[a["name"]] = str(e)
-                r = {**view(), "failed": failed, "browser": browser}
             elif route == "fetch":                      # author-restricted file: through CurseForge's own download page, in the app
                 if not body["url"].startswith("https://www.curseforge.com/") or FETCH is None:
                     raise RuntimeError("This download needs the desktop application")
@@ -662,9 +719,10 @@ class H(BaseHTTPRequestHandler):
                 with LOCK:
                     st = load()
                     a = st["addons"].get(body["key"])
-                    if a and a["name"] == name:
-                        a.update(remote_id=body["remote_id"], latest=body["latest"], update=False, error="")
+                    if a and a["name"] == name:                 # it was the file we asked for: remember which release it is
+                        a["remote_id"] = body["remote_id"]
                         save(st)
+                        LIVE[body["key"]] = {**LIVE.get(body["key"], {}), "latest": body["latest"], "update": False, "error": ""}
                 r = {**view(), "installed": name}
             else:
                 return self.send({"error": "unknown"}, 404)
@@ -731,26 +789,32 @@ def main():
     view.show()
 
     class Fetcher(QObject):
-        """Loads a CurseForge download page in the app and hands back the file it delivers."""
+        """Shows CurseForge's own download page for an addon the user asked for, and hands back the file it delivers."""
         wanted = Signal(str, object)
 
         def __init__(self):
             super().__init__()
             self.box = QDialog(view)
-            self.box.setWindowTitle("CurseForge needs a moment: finish any check shown here")
+            self.box.setWindowTitle("CurseForge: your download starts on this page")
             self.box.resize(900, 700)
             self.web = QWebEngineView(self.box)
             self.web.setPage(QWebEnginePage(profile, self.web))
             QVBoxLayout(self.box).addWidget(self.web)
             self.job = None
-            self.reveal = QTimer(self, singleShot=True, interval=20000, timeout=self.box.show)
+            self.box.rejected.connect(self.closed)              # the user closed the page: give up on this download
             profile.downloadRequested.connect(self.incoming)
             self.wanted.connect(self.start, Qt.QueuedConnection)
 
         def start(self, url, job):
             self.job = job
             self.web.load(QUrl(url))
-            self.reveal.start()                                 # only shown if CurseForge wants something from the user
+            self.box.show()
+
+        def closed(self):
+            if self.job:
+                job, self.job = self.job, None
+                job["done"].set()
+            self.web.setUrl(QUrl("about:blank"))
 
         def incoming(self, dl):
             if not self.job:
@@ -765,11 +829,10 @@ def main():
         def finish(self, dl, job):
             if not dl.isFinished() or job["done"].is_set():
                 return
-            self.reveal.stop()
+            self.job = None
             self.box.hide()
             self.web.setUrl(QUrl("about:blank"))
             job["path"] = Path(dl.downloadDirectory()) / dl.downloadFileName()
-            self.job = None
             job["done"].set()
 
     fetcher = Fetcher()
@@ -781,7 +844,7 @@ def main():
             fetcher.wanted.emit(url, job)
             if not job["done"].wait(180) or not job["path"] or not job["path"].exists():
                 fetcher.job = None
-                raise RuntimeError("CurseForge did not deliver the file. Try again in a minute")
+                raise RuntimeError("No file arrived from CurseForge's page")
             return job["path"]
 
     global FETCH

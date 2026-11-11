@@ -21,11 +21,17 @@ The addon folder (`_forever_/Interface/AddOns`) is found under `~/Games` on firs
 
 ## CurseForge
 
-CurseForge data is only read through the official API (`api.curseforge.com`) with a key you paste into Settings; it is
-stored in `~/.config/wowaddons/curseforge.key` and never leaves your machine except as the API header. Files are
-downloaded from the URL the API returns. If an author has turned off third-party distribution, the API gives no URL; the
-app then loads that addon's CurseForge download page in its own window, exactly as a browser would, and installs the file
-the page delivers. Nothing is mirrored or re-hosted. Every addon links back to its CurseForge page.
+CurseForge is only read through the official API (`api.curseforge.com`) with a key you paste into Settings; the key is stored
+in `~/.config/wowaddons/curseforge.key` and is only ever sent as the API header. The app follows the API terms:
+
+- **Author consent.** Files are downloaded only from the URL the API returns. If an author has turned off third-party
+  distribution, the API gives no URL and the app does not fetch the file by any other route on its own. Such addons show a
+  "Get on CurseForge" button: when you click it, CurseForge's own download page for that file opens in the app, visibly, and
+  the file that page delivers is installed. Nothing is mirrored or re-hosted.
+- **Light on the servers.** One batch request checks every installed addon; searches are one request each; nothing polls.
+- **No stored API data.** What the API returns is kept in memory for the session only. On disk the app keeps your addon
+  list: each addon's project id, folders, installed version and the id of the installed file.
+- Every addon links back to its CurseForge page.
 
 Addons you download yourself can be dropped onto the window, or installed from Settings → "Install from a file you
 downloaded".
