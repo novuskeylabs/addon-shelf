@@ -759,11 +759,11 @@ class H(BaseHTTPRequestHandler):
 
 def main():
     """The application: a Qt window showing the interface, with its own downloader for CurseForge's download pages."""
-    from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Qt
+    from PySide6.QtCore import QEvent, QObject, QTimer, QUrl, Signal, Qt
     from PySide6.QtGui import QDesktopServices, QIcon
     from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
     from PySide6.QtWebEngineWidgets import QWebEngineView
-    from PySide6.QtWidgets import QApplication, QDialog, QVBoxLayout
+    from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
     H.token = secrets.token_urlsafe(24)
     srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
@@ -794,26 +794,49 @@ def main():
 
         def __init__(self):
             super().__init__()
-            self.box = QDialog(view)
-            self.box.setWindowTitle("CurseForge: your download starts on this page")
-            self.box.resize(900, 700)
+            self.box = QFrame(view)                             # a small panel in the corner of the app, not a window
+            self.box.setStyleSheet("QFrame{background:#1c120c;border:2px solid #c9a04f;border-radius:10px}"
+                                   "QLabel{color:#efe1c0;border:0;font-size:14px}"
+                                   "QPushButton{color:#efe1c0;border:1px solid #c9a04f;border-radius:6px;padding:2px 10px}")
+            self.title = QLabel("CurseForge")
+            stop = QPushButton("Cancel", clicked=self.closed)
+            bar = QHBoxLayout()
+            bar.addWidget(self.title, 1)
+            bar.addWidget(stop)
             self.web = QWebEngineView(self.box)
             self.web.setPage(QWebEnginePage(profile, self.web))
-            QVBoxLayout(self.box).addWidget(self.web)
+            lay = QVBoxLayout(self.box)
+            lay.setContentsMargins(10, 8, 10, 10)
+            lay.addLayout(bar)
+            lay.addWidget(self.web)
+            self.box.hide()
             self.job = None
-            self.box.rejected.connect(self.closed)              # the user closed the page: give up on this download
+            view.installEventFilter(self)
             profile.downloadRequested.connect(self.incoming)
             self.wanted.connect(self.start, Qt.QueuedConnection)
 
+        def place(self):
+            w, h = min(560, view.width() - 40), min(400, view.height() - 120)
+            self.box.setGeometry(view.width() - w - 20, view.height() - h - 20, w, h)
+
+        def eventFilter(self, obj, ev):
+            if ev.type() == QEvent.Resize and self.box.isVisible():
+                self.place()
+            return False
+
         def start(self, url, job):
             self.job = job
+            self.title.setText("This author only offers the file on CurseForge. It downloads from this page:")
             self.web.load(QUrl(url))
+            self.place()
             self.box.show()
+            self.box.raise_()
 
         def closed(self):
             if self.job:
                 job, self.job = self.job, None
                 job["done"].set()
+            self.box.hide()
             self.web.setUrl(QUrl("about:blank"))
 
         def incoming(self, dl):

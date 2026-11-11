@@ -83,6 +83,8 @@ dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
 #set{max-width:760px}#set p{max-width:64ch}#set a{color:var(--brass2)}#set ol{padding-left:22px;max-width:64ch}#set li{margin:6px 0}
 #toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,90px);background:var(--ink);color:var(--vellum);border:1px solid var(--brass);padding:11px 22px;border-radius:8px;transition:transform .3s;max-width:80vw;z-index:99}
 #toast.on{transform:translate(-50%,0)}#toast.bad{border-color:var(--ember);color:#ffd9c7}
+nav button{white-space:nowrap}
+@media (max-width:1180px){#status{display:none}}
 @media (max-width:860px){aside.on{position:absolute;inset:0;width:100%;z-index:5}aside>div{width:100%}header{flex-wrap:wrap;gap:4px 14px}#status{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
