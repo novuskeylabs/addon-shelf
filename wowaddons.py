@@ -24,6 +24,7 @@ SEED = {"DialogueUI": "gh:Peterodox/YUI-Dialogue", "AllTheThings": "gh:ATTWoWAdd
         "DynamicCam": "cf:101120", "GearQuestForever": "cf:1698950", "Leatrix_Plus": "cf:94855", "OpenMap": "cf:1735937",
         "TalentsForeverBook": "cf:1700435", "WhatsTraining": "cf:324944"}
 LOCK = threading.Lock()
+SRC_ART = {}        # key -> the source's logo address for that addon (session only)
 SRC_CAT = {}        # key -> the source's own category for that addon (session only)
 LIVE = {}           # key -> {latest, latest_id, page, update, error, restricted}; never written to disk
 RESTART = None      # set by the application window: restarts the app (used after a new key is saved)
@@ -188,6 +189,58 @@ def icon_png(key):
     return out.read_bytes()
 
 
+# Which part of the game an addon takes over. Two installed addons that take over the same part can fight each other.
+# (label, pattern for the addon's name/folders, pattern for its description or None when the description is too loose a signal)
+JOBS = [("manage bags and inventory", r"\bbags?\b|bagnon|inventory", r"\bbags?\b|inventory (window|frame|addon)"),
+        ("automate looting", r"\bloot", r"auto[- ]?loot|faster loot|loot(s|ing)? (faster|instantly|automatically)"),
+        ("replace the action bars", r"action ?bars?|bartender|dominos", r"action ?bars?"),
+        ("change cast bars", r"cast(ing)? ?bars?", r"cast(ing)? ?bars?"),
+        ("restyle unit frames", r"unit ?frames?|blizzframes|\bouf\b", r"unit ?frames?|player ?frame|target ?frame"),
+        ("restyle nameplates", r"name ?plates?|blizzplates", r"name ?plates?"),
+        ("move or resize the default interface", r"move ?any|\bmover\b", r"move (and|or|,) ?(re)?(size|scale)|reposition (any|blizzard|default)"),
+        ("put quest markers on the map", r"questie|quest ?helper", r"quest helper|available quests? on (the |your )?(world ?)?map"),
+        ("replace the world map", r"\bmaps?\b", None), ("add waypoints", r"waypoint|tomtom", None),
+        ("scan for rares", r"rare", None), ("replace the auction house window", r"auction", None),
+        ("show an experience bar", r"\bxp ?bar|experience ?bar", r"\bxp bar|experience bar"),
+        ("control the camera", r"\bcam(era)?\b|dynamiccam", None), ("restyle dialogue and quest text", r"dialog(ue)?", r"dialog(ue)? (ui|window|frame)|quest (text|dialog)"),
+        ("show a damage meter", r"details|recount|skada|damage ?meter", r"damage ?meter"), ("give boss warnings", r"\bdbm\b|deadly ?boss|bigwigs", None),
+        ("bundle many interface tweaks", r"leatrix[_ ]?plus|all in (1|one)", None),
+        ("change tooltips", r"tooltip", None), ("change chat", r"\bchat", None), ("change the minimap", r"minimap", None)]
+
+
+# Jobs that touch the same frames even though they are named differently: (job, job, how to say it).
+RELATED = [("move or resize the default interface", "replace the action bars", "one moves the default action bars, the other replaces them"),
+           ("move or resize the default interface", "restyle unit frames", "one moves the default unit frames, the other restyles them"),
+           ("move or resize the default interface", "change cast bars", "one moves the default cast bar, the other changes it"),
+           ("bundle many interface tweaks", "automate looting", "the tweak bundle has its own faster-looting option")]
+
+
+def jobs_of(a):
+    def find():
+        t = toc(min(a["folders"], key=len))
+        names = " ".join([a["name"], t.get("title", ""), *a["folders"]]).lower()
+        notes = t.get("notes", "").lower()
+        deps = " ".join(t.get(k, "") for k in ("dependencies", "requireddeps", "optionaldeps", "loadwith")).lower()
+        return ({label for label, pn, pd in JOBS if re.search(pn, names) or (pd and re.search(pd, notes))},
+                {d.strip() for d in deps.split(",") if d.strip()})
+    return memo("jobs", min(a["folders"], key=len), find)
+
+
+def conflicts(addons):
+    """Pairs of installed addons that appear to do the same job: [{a, b, why}]. A companion addon is not a conflict."""
+    info = {k: jobs_of(a) for k, a in addons.items()}
+    out = []
+    keys = sorted(addons, key=lambda k: addons[k]["name"].lower())
+    for i, x in enumerate(keys):
+        for y in keys[i + 1:]:
+            why = ["both " + j for j in sorted(info[x][0] & info[y][0])]
+            why += [say for p, q, say in RELATED if (p in info[x][0] and q in info[y][0]) or (p in info[y][0] and q in info[x][0])]
+            fx, fy = {f.lower() for f in addons[x]["folders"]}, {f.lower() for f in addons[y]["folders"]}
+            if why and not (info[x][1] & fy) and not (info[y][1] & fx):
+                out.append({"a": x, "b": y, "why": why})
+    return out
+
+
 def shelf_categories():
     """Category names for the installed view: CurseForge's own when it is connected, otherwise the built-in guesses."""
     try:
@@ -327,7 +380,8 @@ def cf_newest(mod):
         raise RuntimeError("No Forever version published")
     f = max(idx, key=lambda f: f["fileId"])
     return {"version": re.sub(r"\.zip$", "", f["filename"]), "id": str(f["fileId"]), "page": mod["links"]["websiteUrl"],
-            "name": mod["name"], "restricted": mod.get("allowModDistribution") is False, "category": cf_category(mod)}
+            "name": mod["name"], "restricted": mod.get("allowModDistribution") is False, "category": cf_category(mod),
+            "thumb": (mod.get("logo") or {}).get("thumbnailUrl", "")}
 
 
 def is_current(a, new):
@@ -684,6 +738,8 @@ def check():
                      "restricted": bool(new.get("restricted")), "error": ""}
         if new.get("category"):
             SRC_CAT[key] = new["category"]
+        if new.get("thumb"):
+            SRC_ART[key] = new["thumb"]
 
     def one(key, a):
         try:
@@ -703,6 +759,7 @@ def check():
             for mine, theirs in twins.items():                                  # borrow CurseForge's category for them
                 if theirs in mods:
                     SRC_CAT[mine] = cf_category(mods[theirs])
+                    SRC_ART[mine] = (mods[theirs].get("logo") or {}).get("thumbnailUrl", "")
             for k, a in cfs.items():
                 try:
                     if k not in mods:
@@ -722,14 +779,14 @@ def view(st=None):
     names = shelf_categories()
     rows = [{"key": k, "source": {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "No source"}[k.split(":")[0]],
              "size": folder_size(a["folders"]), "notes": toc(a["folders"][0]).get("notes", ""),
-             "category": a.get("category") or SRC_CAT.get(k) or guess_category(toc(a["folders"][0]), a["name"]), "icon": memo("icon", a["folders"][0], lambda k=k: bool(icon_png(k))),
+             "category": a.get("category") or SRC_CAT.get(k) or guess_category(toc(a["folders"][0]), a["name"]), "icon": memo("icon", a["folders"][0], lambda k=k: bool(icon_png(k))), "art": SRC_ART.get(k, ""),
              "can_rollback": any((BACKUPS / re.sub(r"[^\w.-]", "_", k)).glob("*")), **a, **LIVE.get(k, {})}
             for k, a in st["addons"].items()]
     rows.sort(key=lambda r: r["name"].lower())
     fresh = [d for d in downloads() if time.time() - d["when"] < 1800 and d["size"] > 0
              and not any(Path(d["path"] + e).exists() for e in (".crdownload", ".part"))]
     return {"addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
-            "new_downloads": fresh, "categories": names,
+            "new_downloads": fresh, "categories": names, "conflicts": conflicts(st["addons"]),
             "unmanaged": sorted(p for p in group_folders() if not any(p in a["folders"] for a in st["addons"].values())),
             "also": {k: v for k, v in ALSO.items() if v in st["addons"] and k not in st["addons"]}}
 
@@ -998,6 +1055,9 @@ def selftest():
         assert forever_ok(t)
         (t / "A.toc").write_text("## Interface: 120105\n")
         assert not forever_ok(t)
+    lab = lambda name: {label for label, pn, pd in JOBS if re.search(pn, name.lower())}
+    assert lab("Bagnon") & lab("OneBag3 bags")
+    assert not lab("Questie") & lab("Bartender4")
     assert guess_category({"category": "Quests"}, "Attune") == "Quests & Leveling"
     assert guess_category({"notes": "Auction house helper"}, "X") == "Auctions & Economy"
     assert guess_category({}, "Zzz") == "Other"

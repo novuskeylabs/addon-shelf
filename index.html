@@ -146,6 +146,27 @@ body.locked [data-i],body.locked [data-u],body.locked [data-up],body.locked [dat
 .swt{display:block;padding:8px 14px;font:400 19px/1.2 "IM Fell English",serif;color:var(--text-hi);background:radial-gradient(120% 160% at 50% 0,var(--top-a),var(--top-b));border-bottom:2px solid var(--brass)}.swt i{color:var(--brass)}
 .swb{display:block;padding:12px}.sw .tile{display:grid;width:100%}.swr{display:flex;align-items:center;gap:8px;margin-top:10px}.swu{margin-left:auto;font-size:14px;color:var(--ember)}
 .swn{display:flex;justify-content:space-between;align-items:baseline;padding:0 6px 2px;font-weight:500}.swn small{font-weight:400;color:var(--brass2)}
+/* my addons: content beside an always-visible conflicts panel */
+#lib.on{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:26px;align-items:start}.libmain{min-width:0}
+#conf{position:sticky;top:0;background:var(--grain),linear-gradient(160deg,var(--card-a),var(--card-b));color:var(--on);border-radius:var(--r);padding:16px 16px 14px;box-shadow:var(--sh1);outline:1px solid color-mix(in srgb,var(--surf-line) 75%,transparent);outline-offset:-1px}
+#conf h3.group{color:var(--on);font-size:21px}#conf h3.group small{color:var(--ember);font-weight:700}#conf h3.group::after{background:linear-gradient(90deg,var(--surf-line),#0000)}
+.cnote{margin:10px 0 0;font-size:14.5px;line-height:1.4;color:var(--on2);min-height:4.2em}.cnote b{color:var(--on);font-weight:700}
+.cmx{display:grid;grid-template-columns:118px repeat(var(--n),var(--cs));grid-auto-rows:var(--cs);align-items:center;justify-items:center;margin-top:8px}
+.cmx>i{width:100%;height:100%;position:relative}
+.ccell::after,.cdiag::after{content:"";position:absolute;inset:50% auto auto 50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:var(--surf-line)}
+.cdiag::after{width:8px;height:8px;margin:-4px;background:none;border:1.5px solid var(--on2)}
+.ccell.on,.cdiag.on{background:color-mix(in srgb,var(--brass) 16%,transparent)}
+.cdot{width:100%;height:100%;border:0;padding:0;background:none;cursor:pointer;position:relative}
+.cdot::after{content:"";position:absolute;inset:50% auto auto 50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:var(--ember);box-shadow:0 1px 3px #0008;transition:transform .15s var(--ease)}
+.cdot.s2::after{width:18px;height:18px;margin:-9px}.cdot.s3::after{width:22px;height:22px;margin:-11px}
+.cdot:hover::after,.cdot:focus-visible::after{transform:scale(1.25)}.cdot.on{background:color-mix(in srgb,var(--brass) 16%,transparent)}
+.clab{justify-self:stretch;display:flex;align-items:center;gap:7px;min-width:0;height:100%;padding:0 6px 0 2px;border:0;background:none;color:var(--on2);font-size:13.5px;cursor:pointer;text-align:left;border-radius:5px}
+.clab span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.clab.on,.clab:hover{color:var(--on);background:color-mix(in srgb,var(--brass) 16%,transparent)}
+.cico{flex:none;width:18px;height:18px;border-radius:4px;overflow:hidden;display:block;box-shadow:0 0 0 1px #0004}.cico img,.cico svg,.ico svg,.ph svg{width:100%;height:100%;display:block;object-fit:cover}
+.cfoot{margin-top:6px;opacity:.75}.cfoot.on{opacity:1;box-shadow:0 0 0 2px var(--brass2)}
+.tile.pair{box-shadow:var(--sh2),0 0 0 3px var(--ember)}
+.ph{overflow:hidden}span.ph{display:block}span.ph.mini{border-radius:8px}
+@media (max-width:900px){#lib.on{grid-template-columns:1fr}#conf{position:static;order:-1}}
 </style></head><body><script>
 // Colour schemes: a short palette each; every other colour role is derived from it.
 const THEMES=[
@@ -178,11 +199,12 @@ let THEME=applyTheme(localStorage.theme);
 <header><h1><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="50" width="48" height="6" rx="1" fill="#80583a"/><rect x="13" y="16" width="10" height="34" rx="1" fill="#6e2a22"/><rect x="25" y="10" width="12" height="40" rx="1" fill="#27405c"/><rect x="39" y="20" width="11" height="30" rx="1" fill="#7a4a1c"/><g fill="#f0cd7c"><rect x="13" y="21" width="10" height="3"/><rect x="25" y="16" width="12" height="3"/><rect x="39" y="25" width="11" height="3"/><rect x="13" y="42" width="10" height="3"/><rect x="25" y="42" width="12" height="3"/><rect x="39" y="42" width="11" height="3"/></g><path d="M29 4h4v12l-2-2-2 2z" fill="#e0672f"/></svg><span>The Addon <i>Shelf</i></span></h1><p class="realm" title="Only addons built for the World of Warcraft: Forever client are shown and managed">WoW Forever</p><p id="status"></p>
 <nav role="tablist"><button role="tab" data-v="lib" aria-selected="true">My addons<b id="badge" hidden></b></button><button role="tab" data-v="cat">Catalog</button><button role="tab" data-v="set">Settings</button></nav></header>
 <main>
-<section id="lib">
+<section id="lib"><div class="libmain">
  <div class="bar"><input class="field grow" id="filter" placeholder="Filter my addons" autocomplete="off">
   <div class="seg" role="group" aria-label="View"><button data-view="tiles" aria-pressed="true">Tiles</button><button data-view="list" aria-pressed="false">List</button></div>
   <button class="btn quiet" id="chk">Check for updates</button><button class="btn" id="upall" hidden>Update all</button></div>
  <div id="hints"></div><div id="tiles"></div><table id="list" hidden><thead><tr><th>Addon</th><th>Installed</th><th>Newest</th><th>Source</th><th>Size</th><th></th></tr></thead><tbody></tbody></table>
+ </div><div id="conf" aria-live="polite"></div>
 </section>
 <section id="cat">
  <div class="bar"><input class="field grow" id="q" placeholder="Search Forever addons, or paste a GitHub link" autocomplete="off"><button class="btn" id="go">Search</button>
@@ -219,12 +241,40 @@ const mb=n=>n>1<<30?(n/2**30).toFixed(1)+" GB":Math.max(1,Math.round(n/2**20))+"
 function ago(t){if(!t)return"";const d=(Date.now()/1000-t)/86400;return d<1?"today":d<2?"yesterday":d<31?Math.floor(d)+" days ago":d<365?(m=>m<2?"last month":m+" months ago")(Math.floor(d/30.4)):new Date(t*1000).toLocaleDateString(undefined,{year:"numeric",month:"short"})}
 const ago2=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m==1?"a minute ago":m+" minutes ago"};
 const color=a=>LEATHER[hash(a.key)%8];
-const mono=n=>n.replace(/[^A-Za-z0-9 ]/g,"").split(/\s+|(?<=[a-z])(?=[A-Z])/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("");
+// A generated emblem for addons with no artwork: a symmetric sigil drawn from the addon's own id, always the same for that addon.
+function sigil(key){const h=hash(key),n=[4,5,6,8][h%4],r1=30+(h>>3)%10,r2=10+(h>>7)%12,rot=(h>>11)%2?Math.PI/n:0,c=LEATHER[h%8],pts=[];
+ for(let i=0;i<n*2;i++){const r=i%2?r2:r1,t=rot+i*Math.PI/n-Math.PI/2;pts.push((50+r*Math.cos(t)).toFixed(1)+","+(50+r*Math.sin(t)).toFixed(1))}
+ const ring=(h>>13)%3,dots=Array.from({length:n},(_,i)=>{const t=rot+(i+.5)*2*Math.PI/n-Math.PI/2;return `<circle cx="${(50+40*Math.cos(t)).toFixed(1)}" cy="${(50+40*Math.sin(t)).toFixed(1)}" r="2.6"/>`}).join("");
+ return `<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="${c}"/><circle cx="50" cy="50" r="46" fill="#ffffff12"/><g fill="none" stroke="#fff8ec" stroke-width="3" stroke-linejoin="round" opacity=".92"><polygon points="${pts.join(" ")}"/>${ring?`<circle cx="50" cy="50" r="${ring==1?r2-4:r1+8}"/>`:""}</g><g fill="#f4d37e">${dots}<circle cx="50" cy="50" r="${4+(h>>17)%4}"/></g></svg>`}
+// installed addon -> picture: the source's artwork, else the icon in its files, else its emblem
+const artSteps=a=>[a.art,a.icon?`/icon?key=${encodeURIComponent(a.key)}&t=${T}`:""].filter(Boolean);
+const art=a=>{const st=artSteps(a);return st.length?`<img src="${esc(st[0])}" data-k="${esc(a.key)}" data-n="0" alt="" loading="lazy">`:sigil(a.key)};
+addEventListener("error",e=>{const im=e.target;if(!(im instanceof HTMLImageElement)||!im.dataset.k)return;const a=S.addons.find(x=>x.key==im.dataset.k),st=a?artSteps(a):[],n=+im.dataset.n+1;
+ if(st[n]){im.dataset.n=n;im.src=st[n]}else im.outerHTML=im.closest('.ico')?sigil(im.dataset.k):`<span class="ph ${im.className}">${sigil(im.dataset.k)}</span>`},true);
 function tile(a,i){const none=a.source=="No source";
  return `<button class="tile${a.update?" upd":""}${a.key==sel?" sel":""}" data-k="${esc(a.key)}" style="--c:${color(a)};--i:${i}">
- <span class="ico">${a.icon?`<img src="/icon?key=${encodeURIComponent(a.key)}&t=${T}" alt="" onerror="this.replaceWith(document.createTextNode('${mono(a.name)}'))">`:mono(a.name)}</span>
+ <span class="ico">${art(a)}</span>
  <span class="nm">${esc(a.name)}</span><span class="ver">${esc(a.version||"version unknown")}${a.update?`<b> → ${esc(a.latest.slice(0,24))}</b>`:""}</span>
  <span class="st"><span class="src ${a.source}">${esc(a.source)}</span><span>${mb(a.size)}</span>${a.update?`<span class="btn sm" role="button" data-up="${esc(a.key)}">${a.restricted?"Get on CurseForge":"Update"}</span>`:a.latest?`<span class="ok">Up to date</span>`:""}</span></button>`}
+// Possible conflicts: a lower-triangle linkage matrix of the installed addons that seem to do the same job.
+function conflicts(){const C=S.conflicts||[],by=k=>S.addons.find(a=>a.key==k),keys=[...new Set(C.flatMap(c=>[c.a,c.b]))].filter(by).sort((x,y)=>by(x).name.localeCompare(by(y).name)),n=keys.length;
+ const head=`<h3 class="group" style="margin:2px 0 6px">Possible conflicts<small>${C.length||""}</small></h3>`;
+ if(!n){$("#conf").innerHTML=head+`<p class="cnote">None of your ${S.addons.length} addons appear to do the same job. This list updates whenever you install or remove one.</p>`;return}
+ const link=(i,j)=>C.find(c=>(c.a==keys[i]&&c.b==keys[j])||(c.a==keys[j]&&c.b==keys[i]));let g="";
+ for(let i=0;i<n;i++){g+=`<button class="clab" data-open="${esc(keys[i])}" data-r="${i}" title="${esc(by(keys[i]).name)}"><span class="cico">${art(by(keys[i]))}</span><span>${esc(by(keys[i]).name)}</span></button>`;
+  for(let j=0;j<n;j++){const l=j<i&&link(i,j);g+=j>i?"<i></i>":j==i?`<i class="cdiag" data-r="${i}" data-c="${i}"></i>`:l?`<button class="cdot s${Math.min(3,l.why.length)}" data-r="${i}" data-c="${j}" data-a="${esc(keys[i])}" data-b="${esc(keys[j])}" aria-label="${esc(by(keys[i]).name)} and ${esc(by(keys[j]).name)}: ${esc(l.why.join("; "))}"></button>`:`<i class="ccell" data-r="${i}" data-c="${j}"></i>`}}
+ g+="<i></i>"+keys.map((k,j)=>`<span class="cico cfoot" data-c="${j}" title="${esc(by(k).name)}">${art(by(k))}</span>`).join("");
+ $("#conf").innerHTML=head+`<div class="cmx" style="--n:${n};--cs:${Math.max(12,Math.min(26,Math.floor(150/n)))}px">${g}</div><p class="cnote" id="cwhy">${C.length} pair${C.length>1?"s":""} of addons may be doing the same job. Point at a dot to see why; click it to find both tiles.</p>`;
+ $("#conf")._d=$("#cwhy").textContent}
+$("#conf").addEventListener("mouseover",e=>{const d=e.target.closest(".cdot");$$("#conf .on").forEach(x=>x.classList.remove("on"));if(!d){if($("#cwhy"))$("#cwhy").textContent=$("#conf")._d;return}
+ $$(`#conf [data-r="${d.dataset.r}"],#conf [data-c="${d.dataset.c}"]`).forEach(x=>(+x.dataset.c<=+d.dataset.r||x.dataset.c==null)&&x.classList.add("on"));$$(`#conf .clab[data-r="${d.dataset.c}"]`).forEach(x=>x.classList.add("on"));
+ const A=S.addons.find(a=>a.key==d.dataset.a),B=S.addons.find(a=>a.key==d.dataset.b),l=(S.conflicts||[]).find(c=>(c.a==A.key&&c.b==B.key)||(c.a==B.key&&c.b==A.key));
+ $("#cwhy").innerHTML=`<b>${esc(A.name)}</b> and <b>${esc(B.name)}</b>: ${esc(l.why.join("; "))}.`});
+$("#conf").addEventListener("mouseleave",()=>{$$("#conf .on").forEach(x=>x.classList.remove("on"));if($("#cwhy"))$("#cwhy").textContent=$("#conf")._d});
+$("#conf").addEventListener("click",e=>{const d=e.target.closest(".cdot"),o=e.target.closest("[data-open]");
+ if(o){if(view!="tiles"){view=localStorage.view="tiles";draw()}openPage(o.dataset.open);tileOf(o.dataset.open)?.scrollIntoView({block:"center",behavior:"smooth"})}
+ else if(d){if(view!="tiles"){view=localStorage.view="tiles";draw()}$("#filter").value="";draw();$$(".tile.pair").forEach(t=>t.classList.remove("pair"));
+  [d.dataset.a,d.dataset.b].forEach(k=>tileOf(k)?.classList.add("pair"));tileOf(d.dataset.a)?.scrollIntoView({block:"center",behavior:"smooth"});setTimeout(()=>$$(".tile.pair").forEach(t=>t.classList.remove("pair")),6000)}});
 function draw(first){
  const n=S.addons.length,u=S.addons.filter(a=>a.update).length,loose=S.addons.filter(a=>a.source=="No source").length,f=$("#filter").value.toLowerCase();
  document.body.classList.toggle("locked",!!S.wow_running);$("#chk").title=checked?"Last checked "+ago2(checked):"";
@@ -240,7 +290,7 @@ function draw(first){
  $("#tiles").innerHTML=shown.length?[...(S.categories||[]).filter(c=>groups[c]),...Object.keys(groups).filter(c=>!(S.categories||[]).includes(c))].map(c=>`<div class="tg"><h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div></div>`).join(""):`<p class="empty" style="flex:1">No addon matches “${esc($("#filter").value)}”.</p>`;
  $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
  $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent="Addon folder: "+(S.addons_dir||"");
- if(sel)openPage(sel)}
+ conflicts();if(sel)openPage(sel)}
 function openPage(k){const a=S.addons.find(x=>x.key==k);if(!a){closePage();return}sel=k;$$(".tile").forEach(s=>s.classList.toggle("sel",s.dataset.k==k));const loose=a.source=="No source";
  $("#page").style.setProperty("--pc",color(a));
  $("#page>div").innerHTML=`<span class="badge ${a.update?"new":loose?"loose":""}">${a.update?"Newer version available":loose?"No source recorded":a.latest?"Up to date":"Linked to "+esc(a.source)}</span><h2>${esc(a.name)}</h2><p class="by">${esc(a.notes||"No description in the addon.")}</p>
@@ -277,7 +327,7 @@ $("nav").onclick=e=>{const b=e.target.closest("[data-v]");b&&show(b.dataset.v)};
 let mode="landing",CATS=null,TOP={},LIST=null;
 const have=x=>S.addons.some(a=>a.key==x.key)||!!(S.also||{})[x.key],mine=k=>(S.also||{})[k]||k;
 const rowOf=k=>[...R,...Object.values(TOP).flatMap(t=>t.rows||[]),...(LIST?LIST.rows:[])].find(x=>x.key==k);
-const thumb=(x,c="")=>x.thumb?`<img class="${c}" src="${esc(x.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;ph ${c}&quot;>${esc(x.name[0])}</div>'">`:`<div class="ph ${c}">${esc(x.name[0])}</div>`;
+const thumb=(x,c="")=>x.thumb?`<img class="${c}" src="${esc(x.thumb)}" data-k="${esc(x.key)}" data-n="9" alt="" loading="lazy">`:`<span class="ph ${c}">${sigil(x.key)}</span>`;
 const actBtn=x=>have(x)?`<span class="btn sm danger" role="button" data-u="${esc(x.key)}">Uninstall</span>`:`<span class="btn sm" role="button" data-i="${esc(x.key)}">Install</span>`;
 function card(x){return `<button class="card" data-k="${esc(x.key)}"><span class="th">${thumb(x)}${have(x)?`<i class="tick" title="Installed">${ic("check")}</i>`:""}</span>
  <span class="tt"><span class="nm">${esc(x.name)}</span><span class="who">by ${esc(x.author||"unknown")}</span></span><p class="sum">${esc(x.summary||"")}</p>
@@ -362,7 +412,7 @@ addEventListener("drop",async e=>{if(!hasFiles(e))return;e.preventDefault();drag
 setInterval(async()=>{if(busy||$("#dlg").open||document.hidden)return;try{const n=await api0("state");if(JSON.stringify(n)!=JSON.stringify(S)){S=n;draw()}}catch{}},20000);
 function themes(){$("#theme").innerHTML=THEMES.map(t=>`<button class="swo" data-theme-pick="${t.id}" aria-pressed="${t.id==THEME}">
  <span class="sw" style="${Object.entries(themeVars(t)).map(([k,v])=>k+":"+v).join(";")}"><span class="swt">The Addon <i>Shelf</i></span>
- <span class="swb"><span class="tile"><span class="ico" style="--c:${t.acc}">Qu</span><span class="nm">Questie</span><span class="ver">12.6.5</span><span class="st"><span class="src CurseForge">CurseForge</span><span>48 MB</span><span class="ok">Up to date</span></span></span>
+ <span class="swb"><span class="tile"><span class="ico">${sigil("preview-"+t.id)}</span><span class="nm">Questie</span><span class="ver">12.6.5</span><span class="st"><span class="src CurseForge">CurseForge</span><span>48 MB</span><span class="ok">Up to date</span></span></span>
  <span class="swr"><span class="btn sm">Install</span><span class="btn sm quiet">View all</span><span class="swu">Update ready</span></span></span></span>
  <span class="swn">${esc(t.name)}${t.id==THEME?"<small>In use</small>":""}</span></button>`).join("")}
 themes();
