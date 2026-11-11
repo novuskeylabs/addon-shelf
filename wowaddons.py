@@ -113,7 +113,7 @@ def read_toc(folder):
         for line in tocs[0].read_text(encoding="utf-8-sig", errors="ignore").splitlines():
             m = re.match(r"##\s*([^:]+?)\s*:\s*(.*)", line)
             if m:
-                out.setdefault(m.group(1).lower(), re.sub(r"\|c[0-9a-fA-F]{8}|\|r", "", m.group(2)).strip())
+                out.setdefault(m.group(1).lower(), re.sub(r"\|c[0-9a-fA-F]{8}|\|r|\|T[^|]*\|t", "", m.group(2)).strip())
     if out.get("title"):                            # "Questie v12.6.5" -> "Questie": the version has its own field
         out["title"] = re.sub(r"\s+v?\d+(\.\d+)+\S*$", "", out["title"]).strip() or out["title"]
     return out
