@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Paint theme emblems with the local Z-Image Turbo model through ComfyUI's API. usage: paint.py id [id...] | all"""
 import json, sys, time, urllib.request, urllib.parse, random, pathlib
-HOST = "127.0.0.1:8199"; OUT = pathlib.Path(sys.argv[0]).parent / "art"
+HOST = "127.0.0.1:8199"; OUT = pathlib.Path(sys.argv[0]).parent / "raw"            # full-size paintings; cut-outs for the app go in ../art
 STYLE = ("Hand-painted fantasy game emblem, {motif}. {palette}. Ornate crafted metal and enamel, rich painterly brushwork, dramatic rim lighting, "
          "single centered emblem filling the frame, symmetrical, on a plain very dark vignette background. Original design. No text, no letters, no numbers, no watermark, no border.")
 ART = {
@@ -23,6 +23,7 @@ ART = {
  "orc": ("a crude double-headed war axe on a tattered banner with wolf fangs", "Rust red, dark iron and worn leather"),
  "undead": ("a cracked skull with glowing eye sockets rising from green alchemical mist, broken crown", "Sickly green glow, bone and purple-grey"),
  "tauren": ("great bull horns over a carved totem pole decorated with feathers and turquoise beads", "Earth brown, turquoise and feather red"),
+ "skyborne": ("a small floating sky island crowned with an elegant elven spire, wrapped in swirling ribbons of wind, with spread feathered wings and drifting clouds", "Sky blue, white, silver and pale gold"),
  "troll": ("a carved wooden tribal mask with long tusks and bright feathers, crossed spears", "Jungle teal, orange and bone"),
 }
 def api(path, data=None):
