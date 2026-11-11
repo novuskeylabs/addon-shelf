@@ -210,7 +210,8 @@ def sync():
     with LOCK:
         st, groups = load(), group_folders()
         for key in [k for k in st["addons"] if k.startswith("local:")]:       # link entries recorded before the source was known
-            target = SEED.get(key[6:])
+            pid = toc(key[6:]).get("x-curse-project-id", "") if (addons_dir() / key[6:]).is_dir() else ""
+            target = SEED.get(key[6:]) or (pid.isdigit() and "cf:" + pid)
             if target:
                 old = st["addons"].pop(key)
                 if target in st["addons"]:
@@ -616,8 +617,9 @@ def install_upload(name, data):
         z.unlink(missing_ok=True)
 
 
-def install_zip(z):
-    """Unpack a local zip; an addon already on the shelf keeps its source and gets a backup."""
+def install_zip(z, source=None):
+    """Unpack a local zip; an addon already on the shelf keeps its source and gets a backup.
+    `source` is the catalog key the file was fetched for (a CurseForge download page)."""
     if wow_running():
         raise RuntimeError("Close World of Warcraft first: it overwrites addon settings on exit")
     CACHE.mkdir(parents=True, exist_ok=True)
@@ -627,7 +629,7 @@ def install_zip(z):
         with LOCK:
             st = load()
             owners = [k for k, a in st["addons"].items() if set(a["folders"]) & set(names)]
-            key = owners[0] if owners else "local:" + min(names, key=len)
+            key = source or (owners[0] if owners else "local:" + min(names, key=len))
             backup(key, sorted(set(names) | {f for k in owners for f in st["addons"][k]["folders"]}))
             old = st["addons"].get(key, {})
             for k in owners:
@@ -800,16 +802,14 @@ class H(BaseHTTPRequestHandler):
                     raise RuntimeError("This download needs the desktop application")
                 z = FETCH(body["url"])
                 try:
-                    name = install_zip(z)
+                    name = install_zip(z, source=body["key"])
                 finally:
                     z.unlink(missing_ok=True)
                 with LOCK:
                     st = load()
-                    a = st["addons"].get(body["key"])
-                    if a and a["name"] == name:                 # it was the file we asked for: remember which release it is
-                        a["remote_id"] = body["remote_id"]
-                        save(st)
-                        LIVE[body["key"]] = {**LIVE.get(body["key"], {}), "latest": body["latest"], "update": False, "error": ""}
+                    st["addons"][body["key"]]["remote_id"] = body["remote_id"]     # which release this is
+                    save(st)
+                LIVE[body["key"]] = {**LIVE.get(body["key"], {}), "latest": body["latest"], "update": False, "error": ""}
                 r = {**view(), "installed": name}
             else:
                 return self.send({"error": "unknown"}, 404)
