@@ -5,6 +5,7 @@ import calendar, fcntl, json, os, re, socket, zlib, shutil, subprocess, sys, tem
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+STARTED = time.time()
 HOME = Path.home()
 CONF = HOME / ".config/wowaddons"
 CACHE = HOME / ".cache/wowaddons"
@@ -1087,6 +1088,57 @@ def view(st=None):
             "also": {k: v for k, v in ALSO.items() if v in st["addons"] and k not in st["addons"]}, "net": NOTE.get("net", "")}
 
 
+# ---------- updating the app itself from the repository it was cloned from ----------
+def git(*args, at=None, timeout=20):
+    r = subprocess.run(["git", "-C", str(at or HERE), *args], capture_output=True, text=True, timeout=timeout)
+    if r.returncode != 0:
+        raise RuntimeError((r.stderr or r.stdout).strip().splitlines()[-1] if (r.stderr or r.stdout).strip() else "git failed")
+    return r.stdout.strip()
+
+
+def app_status(fetch=False, at=None):
+    """Where this copy of the app stands against its repository: {version, date, source, behind, ahead, changed, news, note}."""
+    if not shutil.which("git"):
+        return {"note": "Updating needs git, which is not installed on this computer"}
+    try:
+        git("rev-parse", "--is-inside-work-tree", at=at)
+        out = {"version": git("rev-parse", "--short", "HEAD", at=at), "date": git("log", "-1", "--format=%cd", "--date=short", at=at),
+               "source": re.sub(r"\.git$", "", git("remote", "get-url", "origin", at=at))}
+    except RuntimeError:
+        return {"note": "This copy was not installed from its repository, so it cannot update itself. Download a fresh copy to update"}
+    if fetch:
+        try:
+            git("fetch", "--quiet", "origin", at=at, timeout=45)
+        except (RuntimeError, subprocess.TimeoutExpired):
+            return {**out, "note": "Could not reach the repository. Check your internet connection and try again"}
+    try:
+        branch = git("rev-parse", "--abbrev-ref", "origin/HEAD", at=at)
+    except RuntimeError:
+        branch = "origin/main"
+    try:
+        ahead, behind = map(int, git("rev-list", "--left-right", "--count", f"HEAD...{branch}", at=at).split())
+        out.update(ahead=ahead, behind=behind, branch=branch, changed=bool(git("status", "--porcelain", "--untracked-files=no", at=at)),
+                   news=git("log", "--format=%s", f"HEAD..{branch}", at=at).splitlines()[:12])
+    except RuntimeError as e:
+        out["note"] = f"Could not compare with the repository ({e})"
+    return out
+
+
+def app_update(at=None):
+    """Move this copy to the repository's newest version. Only ever fast-forwards: local work is never overwritten."""
+    st = app_status(fetch=True, at=at)
+    if st.get("note"):
+        raise RuntimeError(st["note"])
+    if st["changed"]:
+        raise RuntimeError("This copy has been edited by hand, so it was left alone. Undo those edits (or commit them) and try again")
+    if st["ahead"]:
+        raise RuntimeError("This copy has changes that are not in the repository yet, so there is nothing safe to pull")
+    if not st["behind"]:
+        raise RuntimeError("Already on the newest version")
+    git("merge", "--ff-only", st["branch"], at=at, timeout=60)
+    return app_status(at=at)
+
+
 # ---------- window ----------
 class H(BaseHTTPRequestHandler):
     token = ""
@@ -1140,6 +1192,12 @@ class H(BaseHTTPRequestHandler):
                     st["addons"][body["key"]]["category"] = body["category"]
                     save(st)
                 r = view()
+            elif route == "app":
+                r = app_status(fetch=q.get("fetch", ["0"])[0] == "1")
+            elif route == "app_update":
+                r = {**app_update(), "restarting": bool(RESTART)}
+                if RESTART:
+                    threading.Timer(1.5, RESTART).start()
             elif route == "folder":
                 set_addons_dir(body["path"])
                 r = view()
@@ -1197,6 +1255,10 @@ class H(BaseHTTPRequestHandler):
                 return self.send(b"", 403, "text/plain")
             png = icon_png(q.get("key", [""])[0])
             return self.send(png, ctype="image/png", cache="private, max-age=3600") if png else self.send(b"", 404, "text/plain")
+        m = re.fullmatch(r"/fonts/([A-Za-z0-9-]+\.(?:ttf|woff2))", u.path)   # fonts ship with the app: no font server needed
+        if m and (HERE / "fonts" / m.group(1)).is_file():
+            return self.send((HERE / "fonts" / m.group(1)).read_bytes(), ctype="font/ttf" if m.group(1).endswith("ttf") else "font/woff2",
+                             cache="private, max-age=604800")
         m = re.fullmatch(r"/art/([a-z]+(?:-s)?)\.webp", u.path)       # theme artwork shipped with the app
         if m and (HERE / "art" / (m.group(1) + ".webp")).is_file():
             return self.send((HERE / "art" / (m.group(1) + ".webp")).read_bytes(), ctype="image/webp", cache="private, max-age=86400")
@@ -1220,7 +1282,7 @@ def main():
     try:
         from PySide6.QtCore import QEvent, QObject, QTimer, QUrl, Signal, Qt
         from PySide6.QtGui import QDesktopServices, QIcon
-        from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+        from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
         from PySide6.QtWebEngineWidgets import QWebEngineView
         from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMenu, QMessageBox, QPushButton,
                                        QSystemTrayIcon, QVBoxLayout)
@@ -1244,7 +1306,9 @@ def main():
     app.setApplicationName("The Addon Shelf")
     app.setDesktopFileName("wowaddons")
     app.setWindowIcon(QIcon(str(HERE / "icon.svg")))
-    profile = QWebEngineProfile("wowaddons", app)               # keeps CurseForge's cookies between runs
+    # keeps CurseForge's cookies and the chosen theme between runs; a capture run gets throwaway storage so it
+    # cannot collide with the copy the user has open
+    profile = QWebEngineProfile(app) if os.environ.get("WOWADDONS_SHOT") else QWebEngineProfile("wowaddons", app)
 
     class Page(QWebEnginePage):
         def createWindow(self, _type):                          # links the user clicks open in their browser
@@ -1256,6 +1320,11 @@ def main():
     view.setPage(Page(profile, view))
     view.setWindowTitle("The Addon Shelf for WoW Forever")
     view.resize(1500, 950)
+    # Never pull focus back to the app: pages loading must not activate the window, and after a slow start (when the
+    # user has likely moved on to something else) the window appears without taking focus at all.
+    view.page().settings().setAttribute(QWebEngineSettings.WebAttribute.FocusOnNavigationEnabled, False)
+    if time.time() - STARTED > 2.0:
+        view.setAttribute(Qt.WA_ShowWithoutActivating)
     view.load(QUrl(f"http://127.0.0.1:{srv.server_address[1]}/"))
     view.show()
 
@@ -1277,6 +1346,7 @@ def main():
             bar.addWidget(stop)
             self.web = QWebEngineView(self.box)
             self.web.setPage(QWebEnginePage(profile, self.web))
+            self.web.page().settings().setAttribute(QWebEngineSettings.WebAttribute.FocusOnNavigationEnabled, False)
             lay = QVBoxLayout(self.box)
             lay.setContentsMargins(10, 8, 10, 10)
             lay.addLayout(bar)
@@ -1379,9 +1449,12 @@ def main():
             tray.setToolTip(title or "The Addon Shelf for WoW Forever")
     view.titleChanged.connect(titled)
     shot = os.environ.get("WOWADDONS_SHOT")                     # debugging aid: save a picture of the window, then quit
-    if shot:
-        print("tray icon shown:", bool(tray and tray.isVisible()), "| tooltip:", tray.toolTip() if tray else "", flush=True) if os.environ.get("WOWADDONS_TRAYINFO") else None
-        QTimer.singleShot(7000, lambda: (os.environ.get("WOWADDONS_TRAYINFO") and print("tray tooltip later:", tray.toolTip() if tray else "", flush=True), view.grab().save(shot), app.quit()))
+    if shot:                                                    # WOWADDONS_JS runs first, to put the window in the state to capture
+        if os.environ.get("WOWADDONS_JS"):
+            QTimer.singleShot(4000, lambda: view.page().runJavaScript(
+                "(()=>{try{return String(eval(%s))}catch(e){return 'ERR '+e}})()" % json.dumps(os.environ["WOWADDONS_JS"]),
+                lambda r: print("js result:", r, flush=True)))
+        QTimer.singleShot(8000, lambda: (view.grab().save(shot), app.quit()))
     sys.exit(app.exec())
 
 
