@@ -26,6 +26,7 @@ SEED = {"DialogueUI": "gh:Peterodox/YUI-Dialogue", "AllTheThings": "gh:ATTWoWAdd
 LOCK = threading.Lock()
 SRC_CAT = {}        # key -> the source's own category for that addon (session only)
 LIVE = {}           # key -> {latest, latest_id, page, update, error, restricted}; never written to disk
+RESTART = None      # set by the application window: restarts the app (used after a new key is saved)
 FETCH = None        # set by the application window: FETCH(url) -> Path of the file CurseForge's download page delivered
 
 
@@ -793,7 +794,9 @@ class H(BaseHTTPRequestHandler):
                 CONF.mkdir(parents=True, exist_ok=True)
                 CF_KEY.touch(mode=0o600)
                 CF_KEY.write_text(body["key"].strip())
-                r = {}
+                r = {"restarting": bool(RESTART)}
+                if RESTART:
+                    threading.Timer(1.2, RESTART).start()       # after this reply has reached the window
             elif route in ("install", "remove", "rollback"):
                 {"install": install, "remove": remove, "rollback": rollback}[route](body["key"])
                 r = view()
@@ -878,6 +881,7 @@ def main():
     class Fetcher(QObject):
         """Shows CurseForge's own download page for an addon the user asked for, and hands back the file it delivers."""
         wanted = Signal(str, object)
+        again = Signal()
 
         def __init__(self):
             super().__init__()
@@ -901,6 +905,7 @@ def main():
             view.installEventFilter(self)
             profile.downloadRequested.connect(self.incoming)
             self.wanted.connect(self.start, Qt.QueuedConnection)
+            self.again.connect(lambda: os.execv(sys.executable, [sys.executable, str(Path(__file__).resolve())]), Qt.QueuedConnection)
 
         def place(self):
             w, h = min(560, view.width() - 40), min(400, view.height() - 120)
@@ -957,8 +962,8 @@ def main():
                 raise RuntimeError("No file arrived from CurseForge's page")
             return job["path"]
 
-    global FETCH
-    FETCH = fetch
+    global FETCH, RESTART
+    FETCH, RESTART = fetch, fetcher.again.emit
     shot = os.environ.get("WOWADDONS_SHOT")                     # debugging aid: save a picture of the window, then quit
     if shot:
         QTimer.singleShot(7000, lambda: (view.grab().save(shot), app.quit()))
