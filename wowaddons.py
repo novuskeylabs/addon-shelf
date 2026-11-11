@@ -103,12 +103,19 @@ def toc(folder):
 def read_toc(folder):
     out = {}
     d = addons_dir() / folder
-    tocs = sorted(d.glob("*.toc"), key=lambda p: (p.stem != folder, len(p.name)))
+    def rank(p):                                    # the Forever-specific .toc describes this client best
+        forever = bool(re.search(r"[_-]forever$", p.stem, re.I))
+        txt = p.read_text(encoding="utf-8-sig", errors="ignore")
+        m = re.search(r"(?mi)^##\s*Interface\s*:\s*(.*)$", txt)
+        return (not forever, not (m and re.search(r"\b160\d\d\b", m.group(1))), p.stem != folder, len(p.name))
+    tocs = sorted(d.glob("*.toc"), key=rank)
     if tocs:
         for line in tocs[0].read_text(encoding="utf-8-sig", errors="ignore").splitlines():
             m = re.match(r"##\s*([^:]+?)\s*:\s*(.*)", line)
             if m:
                 out.setdefault(m.group(1).lower(), re.sub(r"\|c[0-9a-fA-F]{8}|\|r", "", m.group(2)).strip())
+    if out.get("title"):                            # "Questie v12.6.5" -> "Questie": the version has its own field
+        out["title"] = re.sub(r"\s+v?\d+(\.\d+)+\S*$", "", out["title"]).strip() or out["title"]
     return out
 
 
@@ -224,6 +231,9 @@ def sync():
             for stale in ("latest", "page", "update", "error"):                 # source data lives in memory only
                 a.pop(stale, None)
             a["folders"] = [f for f in a["folders"] if (addons_dir() / f).is_dir()]
+            if a["folders"]:                                                    # names and versions follow the files on disk
+                t = toc(min(a["folders"], key=len))
+                a["name"], a["version"] = t.get("title") or a["name"], t.get("version") or a.get("version", "")
             if not a["folders"]:
                 del st["addons"][key]
         save(st)
@@ -986,6 +996,14 @@ def selftest():
     assert guess_category({"category": "Quests"}, "Attune") == "Quests & Leveling"
     assert guess_category({"notes": "Auction house helper"}, "X") == "Auctions & Economy"
     assert guess_category({}, "Zzz") == "Other"
+    with tempfile.TemporaryDirectory() as t:
+        global _DIR
+        keep, _DIR = _DIR, Path(t)
+        (Path(t) / "Q").mkdir()
+        (Path(t) / "Q" / "Q.toc").write_text("## Interface: 00000\n## Title: Q|cFFFF0000 game client not supported|r\n")
+        (Path(t) / "Q" / "Q_Forever.toc").write_text("## Interface: 16001\n## Title: Q|cFF00FF00 v12.6.5|r\n## Version: 12.6.5\n")
+        assert read_toc("Q")["title"] == "Q" and read_toc("Q")["version"] == "12.6.5", read_toc("Q")
+        _DIR = keep
     print("selftest ok")
 
 
