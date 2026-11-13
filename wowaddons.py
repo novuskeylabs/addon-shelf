@@ -1206,8 +1206,7 @@ class H(BaseHTTPRequestHandler):
         body = obj if isinstance(obj, bytes) else json.dumps(obj).encode()
         self.send_response(code)
         self.send_header("Content-Type", ctype)
-        if cache:
-            self.send_header("Cache-Control", cache)
+        self.send_header("Cache-Control", cache or "no-store")     # replies carry source data: never into the browser cache on disk
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -1400,6 +1399,7 @@ def main():
         """Shows CurseForge's own download page for an addon the user asked for, and hands back the file it delivers."""
         wanted = Signal(str, object)
         again = Signal()
+        gone = Signal()
 
         def __init__(self):
             super().__init__()
@@ -1424,6 +1424,7 @@ def main():
             view.installEventFilter(self)
             profile.downloadRequested.connect(self.incoming)
             self.wanted.connect(self.start, Qt.QueuedConnection)
+            self.gone.connect(self.closed, Qt.QueuedConnection)
             self.again.connect(lambda: os.execv(sys.executable, [sys.executable, str(Path(__file__).resolve())]), Qt.QueuedConnection)
 
         def place(self):
@@ -1437,7 +1438,7 @@ def main():
 
         def start(self, url, job):
             self.job = job
-            self.title.setText("This author only offers the file on CurseForge. It downloads from this page:")
+            self.title.setText("Downloading from CurseForge's own page")
             self.web.load(QUrl(url))
             self.place()
             self.box.show()
@@ -1477,7 +1478,7 @@ def main():
             job = {"done": threading.Event(), "path": None}
             fetcher.wanted.emit(url, job)
             if not job["done"].wait(180) or not job["path"] or not job["path"].exists():
-                fetcher.job = None
+                fetcher.gone.emit()                             # take the panel away too
                 raise RuntimeError("No file arrived from CurseForge's page")
             return job["path"]
 

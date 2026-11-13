@@ -293,7 +293,7 @@ function tile(a,i){const none=a.source=="No source";
  return `<button class="tile${a.update?" upd":""}${a.key==sel?" sel":""}" data-k="${esc(a.key)}" style="--c:${color(a)};--i:${i}">
  <span class="ico">${art(a)}</span>
  <span class="nm">${esc(a.name)}</span><span class="ver">${esc(a.version||"version unknown")}${a.update?`<b> → ${esc(a.latest.slice(0,24))}</b>`:""}</span>
- <span class="st"><span class="src ${a.source}">${esc(a.source)}</span><span>${mb(a.size)}</span>${a.damaged?`<span class="bad">Damaged</span>`:a.update?`<span class="btn sm" role="button" data-up="${esc(a.key)}">${a.restricted?"Get on CurseForge":"Update"}</span>`:a.latest?`<span class="ok">Up to date</span>`:""}</span></button>`}
+ <span class="st"><span class="src ${a.source}">${esc(a.source)}</span><span>${mb(a.size)}</span>${a.damaged?`<span class="bad">Damaged</span>`:a.update?`<span class="btn sm" role="button" data-up="${esc(a.key)}">Update</span>`:a.latest?`<span class="ok">Up to date</span>`:""}</span></button>`}
 // Possible conflicts: a lower-triangle linkage matrix of the installed addons that seem to do the same job.
 function conflicts(){const C=S.conflicts||[],by=k=>S.addons.find(a=>a.key==k),keys=[...new Set(C.flatMap(c=>[c.a,c.b]))].filter(by).sort((x,y)=>by(x).name.localeCompare(by(y).name)),n=keys.length;
  const head=`<h3 class="group" style="margin:2px 0 6px">Possible conflicts<small>${C.length?C.length+(C.length>1?" pairs":" pair"):""}</small></h3>`;
@@ -318,7 +318,7 @@ function draw(first){
  document.body.classList.toggle("locked",!!S.wow_running);$("#chk").title=checked?"Last checked "+ago2(checked):"";
  $("#status").textContent=S.wow_running?"World of Warcraft is running: changes are locked":"World of Warcraft is closed: safe to make changes";$("#status").className=S.wow_running?"locked":"";
  document.title=(u?`${u} update${u>1?"s":""} available - `:"")+"LinuxForever Addon Shelf";
- const auto=S.addons.filter(a=>a.update&&!a.restricted).length;$("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!auto;$("#upall").textContent=`Update all ${auto}`;
+ $("#badge").hidden=!u;$("#badge").textContent=u;$("#upall").hidden=!u;$("#upall").textContent=`Update all ${u}`;
  $("#hints").innerHTML=(S.has_cf_key?"":`<p class="hint"><span>CurseForge is not connected, so ${S.addons.filter(a=>a.source=="CurseForge").length} of your addons cannot be checked for updates.</span><button class="btn sm" data-go="set">Connect CurseForge</button></p>`)
   +(S.new_downloads||[]).filter(d=>!seen.has(d.path)).map(d=>`<p class="hint"><span>New download: <b>${esc(d.name)}</b> (${mb(d.size)}, ${ago(d.when)})</span><button class="btn sm" data-f="${esc(d.path)}">Install it</button><button class="btn sm quiet" data-x="${esc(d.path)}">Not an addon</button></p>`).join("")
   +(S.net?`<p class="hint"><span>Could not check for updates. ${esc(S.net)}. Your installed addons are unaffected.</span><button class="btn sm" data-retry>Try again</button></p>`:"")
