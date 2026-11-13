@@ -51,7 +51,8 @@ in `~/.config/wowaddons/curseforge.key` and is only ever sent as the API header.
 - **Author consent.** Files are downloaded only from the URL the API returns. If an author has turned off third-party
   distribution, the API gives no URL and the app does not fetch the file by any other route on its own. Such addons show a
   "Get on CurseForge" button: when you click it, CurseForge's own download page for that file opens in the app, visibly, and
-  the file that page delivers is installed. Nothing is mirrored or re-hosted.
+  the file that page delivers is installed. "Update all" does the same for each such addon in turn, one visible page at a
+  time, after the ordinary updates. Nothing is mirrored or re-hosted.
 - **Light on the servers.** One batch request checks every installed addon; searches are one request each; nothing polls.
 - **No stored API data.** What the API returns is kept in memory for the session only. On disk the app keeps your addon
   list: each addon's project id, folders, installed version and the id of the installed file.
