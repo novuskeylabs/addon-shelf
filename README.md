@@ -11,8 +11,8 @@ installed or managed.
 - **Reset to default settings:** sets an addon's saved settings aside (with undo) so it starts fresh.
 - **When things go wrong:** plain messages when offline, damaged addons are flagged with a repair option, and a missing
   game folder is explained with a way to point at it.
-- **Safe changes:** refuses to touch addons while the game is running, keeps the previous two versions of every
-  addon, and can restore them.
+- **Safe changes:** while the game is running, new addons can be added (they load at its next start) but installed
+  ones are left alone; the previous two versions of every addon are kept and can be restored.
 - **Finds the game for you:** on first start, and whenever the game goes missing, it scans the usual places (Lutris,
   Bottles, Heroic, Steam/Proton, plain Wine, their Flatpak versions, extra drives). You can also choose the folder in
   Settings.

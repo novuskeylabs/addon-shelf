@@ -470,6 +470,14 @@ def sync():
         return st
 
 
+def game_has(names):
+    """Refuse to replace addon folders the running game has loaded. A brand-new addon is safe to add while the game
+    runs: nothing of it is loaded and it has no saved settings yet; the game picks it up the next time it starts."""
+    if wow_running() and any((addons_dir() / n).exists() for n in names):
+        raise RuntimeError("Close World of Warcraft first: this addon is already installed and the game has it loaded. "
+                           "Only new addons can be added while it runs")
+
+
 def wow_running():
     """Is the game running? Read from /proc so no extra program is needed."""
     me = str(os.getpid())
@@ -863,8 +871,7 @@ def swap_in(key, found, replace):
 
 
 def install(key):
-    if wow_running():
-        raise RuntimeError("Close World of Warcraft first: it overwrites addon settings on exit")
+    game_has(load()["addons"].get(key, {}).get("folders", []))      # before downloading anything
     new = latest(key)
     if not new["url"]:
         raise NeedsBrowser(key, new)
@@ -874,6 +881,7 @@ def install(key):
         download(new["url"], zpath)
         found = unpack_forever(zpath, Path(tmp) / "x")
         names = [d.name for d in found]
+        game_has(names)
         with LOCK:
             st = load()
             # an addon installed by hand earlier is adopted: same folders, new owner
@@ -928,12 +936,11 @@ def install_upload(name, data):
 def install_zip(z, source=None):
     """Unpack a local zip; an addon already on the shelf keeps its source and gets a backup.
     `source` is the catalog key the file was fetched for (a CurseForge download page)."""
-    if wow_running():
-        raise RuntimeError("Close World of Warcraft first: it overwrites addon settings on exit")
     CACHE.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=CACHE) as tmp:
         found = unpack_forever(z, Path(tmp) / "x")
         names = sorted(d.name for d in found)
+        game_has(names)
         with LOCK:
             st = load()
             owners = [k for k, a in st["addons"].items() if set(a["folders"]) & set(names)]
