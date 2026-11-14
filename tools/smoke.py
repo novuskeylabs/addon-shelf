@@ -61,6 +61,7 @@ w.HOME, w.CONF, w.CACHE, w.BACKUPS, w.SETTINGS = box, box / "conf", box / "cache
 w.STATE, w.CF_KEY = w.CONF / "state.json", w.CONF / "curseforge.key"
 w.CONF.mkdir()
 w.STATE.write_text(json.dumps({"addons_dir": str(addons), "addons": {}})); w._DIR = addons
+real_check = w.check
 w.check = lambda: w.view()                                  # no network in the test
 w.wow_running = lambda: False
 
@@ -75,6 +76,41 @@ try:
     w.install_zip(z); raise SystemExit("smoke: FAIL a non-Forever addon was installed")
 except RuntimeError:
     pass
+# background checks: back-off after failures, nothing lost when the network is down or a source refuses, no overlap
+import time, urllib.error, urllib.request
+A = w.AUTO
+A["last"] = time.time()
+assert 1700 < w.auto_wait() <= 1800, w.auto_wait()                     # 30 minutes by default
+A["fails"] = 1; assert 3500 < w.auto_wait() <= 3600
+A["fails"] = 6; assert 7100 < w.auto_wait() <= 7200                    # capped at two hours
+A["fails"] = 0
+w.CF_KEY.write_text("test-key")
+st = json.loads(w.STATE.read_text()); st["addons"]["cf:1"] = st["addons"].pop(next(iter(st["addons"]))); w.STATE.write_text(json.dumps(st))
+w.LIVE["cf:1"] = {"latest": "Demo-2.0", "latest_id": "2", "page": "", "update": True, "restricted": False, "error": ""}
+real_open = urllib.request.urlopen
+w.check = real_check                                        # the real check, against a network that fails
+def offline(*a, **k): raise urllib.error.URLError("network is unreachable")
+urllib.request.urlopen = offline
+r = w.auto_once(); assert r is False and A["fails"] == 1, ("an unreachable source must count as a failed check", r, A["fails"], dict(w.NOTE), dict(w.LIVE), list(json.loads(w.STATE.read_text())["addons"]))
+assert w.LIVE["cf:1"]["update"] is True and w.NOTE.get("net"), "a failed check must keep what was known"
+def blocked(*a, **k): raise urllib.error.HTTPError("https://api.curseforge.com/v1/mods", 403, "Forbidden", {}, None)
+urllib.request.urlopen = blocked
+assert w.auto_once() is False and A["fails"] == 2 and w.LIVE["cf:1"]["update"] is True, "a refused request must keep what was known"
+urllib.request.urlopen = real_open
+def boom(): raise RuntimeError("anything at all")
+w.check = boom
+assert w.auto_once() is False and A["fails"] == 3, "a crash inside a check must be contained"
+w.check = lambda: w.view()                                              # no network in the rest of the test
+w.NOTE.clear()
+assert w.auto_once() == ["Demo"] and A["fails"] == 0, "a good check reports the new update and resets the back-off"
+assert w.auto_once() == [], "the same update is announced once"
+with w.WORK:
+    assert w.auto_once() is None, "no background check while addons are being changed"
+st = json.loads(w.STATE.read_text()); st["auto_check"] = 0; w.STATE.write_text(json.dumps(st))
+assert w.auto_wait() is None, "off means off"
+st["auto_check"] = 30; w.STATE.write_text(json.dumps(st))
+w.LIVE.clear()
+
 try:
     w.main()
 finally:

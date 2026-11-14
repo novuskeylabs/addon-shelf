@@ -18,6 +18,8 @@ installed or managed.
   Settings.
 - **System tray:** the window's close button can close the app or keep it running in the tray; it asks the first time,
   can remember the answer, and Settings changes it. Opening the app again brings the running copy's window back.
+- **Background checks:** while open or in the tray it looks for addon updates every 30 minutes and tells you when
+  something new is out. A lost connection or a blocked source changes nothing on screen and is retried later.
 - **Updates itself:** Settings can pull the newest version from this repository.
 
 ## Install
@@ -67,7 +69,8 @@ in `~/.config/wowaddons/curseforge.key` and is only ever sent as the API header.
   "Get on CurseForge" button: when you click it, CurseForge's own download page for that file opens in the app, visibly, and
   the file that page delivers is installed. "Update all" does the same for each such addon in turn, one visible page at a
   time, after the ordinary updates. Nothing is mirrored or re-hosted.
-- **Light on the servers.** One batch request checks every installed addon; searches are one request each; nothing polls.
+- **Light on the servers.** One batch request checks every installed addon; searches are one request each. Background
+  checks run at most every 30 minutes (hourly, three-hourly or off in Settings) and wait longer after a failed one.
 - **No stored API data.** What the API returns is kept in memory for the session only. On disk the app keeps your addon
   list: each addon's project id, folders, installed version and the id of the installed file.
 - Every addon links back to its CurseForge page.

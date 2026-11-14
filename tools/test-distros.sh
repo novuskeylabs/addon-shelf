@@ -54,9 +54,10 @@ for f in "$@"; do
     spec=$(family "$f"); [ -n "$spec" ] || { echo "$f: unknown family"; fail=1; continue; }
     image=${spec%%|*}; prep=${spec#*|}
     log="$CACHE/logs/$f.log"
-    if "$RUN" run --rm --shm-size=1g -e TUID="$(id -u)" -e TGID="$(id -g)" -v "$HERE:/src:ro" -v "$CACHE/pip:/pipcache" "$image" \
+    if timeout "${LIMIT:-480}" "$RUN" run --rm --shm-size=1g -e TUID="$(id -u)" -e TGID="$(id -g)" -v "$HERE:/src:ro" -v "$CACHE/pip:/pipcache" "$image" \
         sh -c "mkdir -p /home/t && ($prep) >/tmp/prep.log 2>&1 || { tail -20 /tmp/prep.log; exit 3; }; $INSIDE" >"$log" 2>&1
     then echo "$f: PASS  ($(grep -c '^STEP .* ok$' "$log") of 3 steps; $image)"
+    elif [ $? -eq 124 ]; then echo "$f: STALLED  (no result within ${LIMIT:-480} s, usually a slow package mirror; run it again)"; "$RUN" ps -q --filter "ancestor=$image" | xargs -r "$RUN" kill >/dev/null 2>&1; fail=1
     else echo "$f: FAIL  (see $log)"; grep -E '^STEP|smoke:|rror' "$log" | tail -6 | sed 's/^/    /'; fail=1
     fi
 done

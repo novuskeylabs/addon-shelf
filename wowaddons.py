@@ -30,6 +30,8 @@ SRC_ART = {}        # key -> the source's logo address for that addon (session o
 SRC_CAT = {}        # key -> the source's own category for that addon (session only)
 LIVE = {}           # key -> {latest, latest_id, page, update, error, restricted}; never written to disk
 RESTART = None      # set by the application window: restarts the app (used after a new key is saved)
+WORK = threading.Lock()     # held while addons are being changed, and by a background check: never both at once
+CHECKING = threading.Lock() # one update check at a time, whoever asked for it
 NOTE = {}           # "net": why the last update check could not reach the sources
 CLOSE = None        # set by the application window: CLOSE("tray" | "quit" | "raise")
 TRAY = False        # is there a system tray to minimize to?
@@ -1120,6 +1122,76 @@ def check():
     return view(st)
 
 
+# ---------- checking in the background ----------
+AUTO_CHOICES = (0, 30, 60, 180)     # minutes between background checks; 0 = off. Nothing shorter: the sources ask tools not to poll
+AUTO = {"last": 0.0, "fails": 0, "told": set(), "due": False, "wake": threading.Event()}
+
+
+def auto_minutes():
+    m = load().get("auto_check", 30)
+    return m if m in AUTO_CHOICES else 30
+
+
+def auto_wait(now=None):
+    """Seconds until the next background check, or None when they are off. Counted from the last check of any kind,
+    and doubled after each failed one (30 min, 1 h, 2 h) so a dead connection or a blocked source is not hammered."""
+    m = auto_minutes()
+    if not m:
+        return None
+    gap = min(m * 60 * 2 ** AUTO["fails"], max(m * 60, 7200))
+    return max(60.0, AUTO["last"] + gap - (now or time.time()))
+
+
+def auto_once():
+    """One quiet check. Returns the names of addons that newly have an update, False if the check failed, or None if
+    it was skipped. A failure changes nothing on screen: what was known before the check is put back."""
+    if not CHECKING.acquire(blocking=False):            # a check is already running
+        return None
+    if not WORK.acquire(blocking=False):                # addons are being changed right now: try again later
+        CHECKING.release()
+        return None
+    try:
+        before, note = dict(LIVE), dict(NOTE)
+        try:
+            st = check()
+            linked = [a for a in st["addons"] if a["source"] != "No source"]
+            ok = not NOTE.get("net") and not (linked and all(a.get("error") for a in linked))
+        except Exception:
+            ok = False
+        AUTO["last"] = time.time()
+        if not ok:
+            AUTO["fails"] += 1
+            LIVE.clear(), LIVE.update(before)
+            if not NOTE.get("net"):
+                NOTE.clear(), NOTE.update(note)
+            return False
+        AUTO["fails"] = 0
+        now = {a["key"]: a["name"] for a in st["addons"] if a.get("update")}
+        fresh = [n for k, n in now.items() if k not in AUTO["told"]]
+        AUTO["told"] = set(now)
+        return fresh
+    finally:
+        WORK.release()
+        CHECKING.release()
+
+
+def auto_loop(done):
+    """Runs for the life of the app. `done(names)` is called after each successful background check."""
+    while True:
+        wait = auto_wait()
+        AUTO["wake"].wait(3600 if wait is None else wait)          # woken early by a settings change or the window reopening
+        woke, due = AUTO["wake"].is_set(), AUTO["due"]
+        AUTO["wake"].clear()
+        AUTO["due"] = False
+        if not auto_minutes():
+            continue
+        if woke and not (due and time.time() - AUTO["last"] >= 300):   # reopened: only check if the last one is stale
+            continue
+        fresh = auto_once()                             # skipped (None): auto_wait's one-minute floor retries it soon
+        if fresh not in (None, False):
+            done(fresh)
+
+
 SOURCES = {"cf": "CurseForge", "gh": "GitHub", "wowi": "WoWInterface", "local": "No source"}
 
 
@@ -1128,7 +1200,7 @@ def view(st=None):
         st = st or sync()
         groups = group_folders()
     except GameMissing as e:
-        return {"on_close": load().get("on_close", "ask"), "tray": TRAY, "addons": [], "game_missing": str(e), "wow_running": False, "has_cf_key": bool(cf_key()), "addons_dir": "",
+        return {"auto_check": auto_minutes(), "on_close": load().get("on_close", "ask"), "tray": TRAY, "addons": [], "game_missing": str(e), "wow_running": False, "has_cf_key": bool(cf_key()), "addons_dir": "",
                 "new_downloads": [], "categories": CATEGORIES, "conflicts": [], "unmanaged": [], "also": {}, "net": ""}
     names = shelf_categories()
     saved = {}                                          # one pass over the game's settings folders for all addons
@@ -1165,7 +1237,7 @@ def view(st=None):
             return "its description (.toc) file is empty or unreadable"
         return "it is not built for WoW Forever"
     loose = [{"name": p, "why": why(p)} for p in sorted(groups) if p not in owned]
-    return {"on_close": st.get("on_close", "ask"), "tray": TRAY, "addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
+    return {"auto_check": auto_minutes(), "on_close": st.get("on_close", "ask"), "tray": TRAY, "addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
             "new_downloads": fresh, "categories": names, "conflicts": conflicts(st["addons"]), "unmanaged": loose,
             "also": {k: v for k, v in ALSO.items() if v in st["addons"] and k not in st["addons"]}, "net": NOTE.get("net", "")}
 
@@ -1243,12 +1315,27 @@ class H(BaseHTTPRequestHandler):
         # other websites in the browser must not be able to drive this server
         if self.headers.get("Host", "").split(":")[0] != "127.0.0.1" or not secrets.compare_digest(self.headers.get("X-Token", ""), H.token):
             return self.send({"error": "forbidden"}, 403)
+        held = False
         try:
             route = u.path.removeprefix("/api/")
+            if route in ("install", "remove", "rollback", "fetch", "upload", "install_file", "reset_settings", "restore_settings", "folder"):
+                WORK.acquire()                          # a background check never runs in the middle of a change
+                held = True
             if route == "state":
                 r = view()
             elif route == "check":
-                r = check()
+                with CHECKING:
+                    r = check()
+                    AUTO["last"], AUTO["told"] = time.time(), {a["key"] for a in r["addons"] if a.get("update")}
+            elif route == "auto_check":                 # minutes between background checks; 0 turns them off
+                if body["value"] not in AUTO_CHOICES:
+                    raise RuntimeError("Unknown choice")
+                with LOCK:
+                    st = load()
+                    st["auto_check"] = body["value"]
+                    save(st)
+                AUTO["wake"].set()
+                r = view()
             elif route == "search":
                 r = search(q.get("q", [""])[0])
             elif route == "categories":
@@ -1347,6 +1434,9 @@ class H(BaseHTTPRequestHandler):
             self.send({"error": "The disk is full. Nothing was changed" if e.errno == 28 else f"A file operation failed ({e.strerror or e}). Nothing was changed"}, 400)
         except Exception as e:
             self.send({"error": str(e)}, 400)
+        finally:
+            if held:
+                WORK.release()
 
     def do_GET(self):
         if self.path.startswith("/api/"):
@@ -1472,6 +1562,7 @@ def main():
         wanted = Signal(str, object)
         again = Signal()
         shut = Signal(str)
+        fresh = Signal(object)
         gone = Signal()
 
         def __init__(self):
@@ -1563,6 +1654,15 @@ def main():
         view.show()
         view.raise_()
         view.activateWindow()
+        AUTO["due"] = True                              # coming back to the window: check now if the last check is stale
+        AUTO["wake"].set()
+
+    def checked(names):                                 # a background check finished: refresh the page, say what is new
+        view.page().runJavaScript("typeof autoChecked=='function'&&autoChecked()")
+        if names and tray and not view.isActiveWindow():
+            more = len(names) - 3
+            tray.showMessage(APP, ("%d addon updates available: " % len(names) if len(names) > 1 else "Update available: ")
+                             + ", ".join(names[:3]) + (" and %d more" % more if more > 0 else ""), icon, 6000)
 
     told = []
 
@@ -1572,6 +1672,7 @@ def main():
             told.append(1)
             tray.showMessage(APP, "Still running in the system tray. Click the icon to open the window again.", icon, 5000)
 
+    fetcher.fresh.connect(checked, Qt.QueuedConnection)
     fetcher.shut.connect(lambda how: {"tray": to_tray, "quit": leave, "raise": raise_window}[how](), Qt.QueuedConnection)
     global CLOSE, TRAY
     CLOSE = fetcher.shut.emit
@@ -1599,6 +1700,9 @@ def main():
         tray.setToolTip(APP)
         tray.activated.connect(toggle)
         tray.show()
+
+    if not os.environ.get("WOWADDONS_SHOT"):
+        threading.Thread(target=auto_loop, args=(fetcher.fresh.emit,), daemon=True).start()
 
     def titled(title):                                              # the page puts the update count in its title
         view.setWindowTitle(title or APP)

@@ -123,7 +123,7 @@ dialog{border:0;padding:0;width:min(1000px,94vw);max-height:90vh;border-radius:1
 dialog[open]{height:min(900px,90vh);display:flex;flex-direction:column;animation:pop .2s var(--ease)}@keyframes pop{from{transform:scale(.97);opacity:0}}
 #closedlg{width:min(480px,92vw)}#closedlg[open]{height:fit-content}.cd{padding:26px 28px 22px}.cd h2{margin:0 0 10px}.cd p{margin:0 0 16px;color:var(--on2)}
 .chk{display:flex;align-items:center;gap:10px;cursor:pointer}.chk input{width:18px;height:18px;accent-color:var(--brass);cursor:pointer}.cdb{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:22px}
-#onclose{width:max-content;max-width:100%}.seg button:disabled{opacity:.5;cursor:default}
+#onclose,#autochk{width:max-content;max-width:100%}.seg button:disabled{opacity:.5;cursor:default}
 dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
 .dhead,.dfoot{flex:none}.dhead{display:flex;gap:18px;padding:22px 26px 16px;align-items:flex-start;border-bottom:1px solid var(--surf-line)}
 .dhead img{width:84px;height:84px;border-radius:12px;object-fit:cover;background:var(--ph);box-shadow:0 3px 8px #0006}.dhead div{flex:1;min-width:0}
@@ -256,6 +256,8 @@ let THEME=applyTheme(localStorage.theme);
  <h2 style="margin-top:34px">Addon folder</h2><p id="dir"></p><p>If the game was moved or the app picked the wrong copy, paste the full path of its Interface/AddOns folder here.</p>
  <div class="bar"><input class="field grow" id="folder" placeholder="/path/to/World of Warcraft/_forever_/Interface/AddOns" aria-label="AddOns folder" autocomplete="off"><button class="btn" id="savefolder">Use this folder</button></div>
  <h2 style="margin-top:34px">Themes</h2><p>Pick a theme: your faction, your class, your race, or a plain colour scheme. Each preview shows how an addon tile and the buttons look in it. The emblems are original paintings made for this app.</p><div id="theme" role="group" aria-label="Theme"></div>
+ <h2 style="margin-top:34px">Checking for updates</h2><p id="autonote"></p>
+ <div class="seg" id="autochk" role="group" aria-label="Check for addon updates in the background"><button data-ac="0">Off</button><button data-ac="30">Every 30 minutes</button><button data-ac="60">Every hour</button><button data-ac="180">Every 3 hours</button></div>
  <h2 style="margin-top:34px">Closing the window</h2><p id="closenote"></p>
  <div class="seg" id="onclose" role="group" aria-label="When the window is closed"><button data-oc="ask">Ask every time</button><button data-oc="tray">Minimize to tray</button><button data-oc="quit">Close the app</button></div>
  <h2 style="margin-top:34px">App updates</h2><p id="appver">Checking this copy…</p>
@@ -340,6 +342,8 @@ function draw(first){
  $("#tiles").className=first?"first":"";
  $("#tiles").innerHTML=S.game_missing?`<div class="empty"><p>${esc(S.game_missing)}.</p><p><button class="btn" data-again>Look again</button> <button class="btn quiet" data-go="set">Choose the folder in Settings</button></p></div>`:shown.length?[...(S.categories||[]).filter(c=>groups[c]),...Object.keys(groups).filter(c=>!(S.categories||[]).includes(c))].map(c=>`<div class="tg"><h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div></div>`).join(""):`<p class="empty" style="flex:1">No addon matches “${esc($("#filter").value)}”.</p>`;
  $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
+ $$("#autochk button").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.ac==(S.auto_check??30)));
+ $("#autonote").textContent=(S.auto_check??30)?"The app checks quietly while it is open or in the tray, and tells you when something new is out. If a check fails it waits longer before trying again.":"Background checks are off. Updates are looked for when the app starts and when you press “Check for updates”.";
  $$("#onclose button").forEach(b=>{b.setAttribute("aria-pressed",S.tray&&b.dataset.oc==(S.on_close||"ask"));b.disabled=!S.tray});
  $("#closenote").textContent=S.tray?"Choose what the window’s close button does.":"This desktop has no system tray, so closing the window always closes the app.";
  $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent=S.addons_dir?"Currently using: "+S.addons_dir:"No addon folder found yet.";
@@ -466,6 +470,10 @@ $("#savekey").onclick=async()=>{const k=$("#key").value.trim();if(!k)return toas
 $("#scan").onclick=async()=>{try{const r=await api("downloads");$("#files").innerHTML=r.files.length?`<table class="tbl" style="margin-bottom:20px"><tbody>${r.files.map(f=>`<tr><td>${esc(f.name)}</td><td>${mb(f.size)}</td><td>${ago(f.when)}</td><td><button class="btn sm" data-f="${esc(f.path)}">Install</button></td></tr>`).join("")}</tbody></table>`:`<p>No .zip files in Downloads.</p>`}catch(e){toast(e.message,1)}};
 $("#files").onclick=async e=>{const b=e.target.closest("[data-f]");if(!b)return;b.disabled=true;try{const r=await api("install_file",{path:b.dataset.f});S=r;draw();b.textContent="Installed";toast(`Installed ${r.installed}${later()}`)}catch(x){b.disabled=false;toast(x.message,1)}};
 // The window's close button: the app asks here unless a choice was remembered.
+// A background check finished in the app: show what it found, without the progress bar.
+function autoChecked(){api0("state").then(s=>{S=s;checked=Date.now();draw()}).catch(()=>{});return true}
+$("#autochk").onclick=async e=>{const v=e.target.dataset.ac;if(v===undefined)return;
+ try{S=await api("auto_check",{value:+v});draw();toast(+v?`Checking for updates every ${+v<60?v+" minutes":+v==60?"hour":"3 hours"}`:"Background checks are off")}catch(x){toast(x.message,1)}};
 function askClose(){const d=$("#closedlg");if(!d.open){$("#closerem").checked=false;d.showModal()}return true}
 $("#closedlg").onclick=async e=>{const c=e.target.dataset.c,d=$("#closedlg");if(!c)return;d.close();if(c=="cancel")return;const remember=$("#closerem").checked;
  try{await api("close",{action:c,remember});if(remember){S.on_close=c;draw()}}catch(x){toast(x.message,1)}};
