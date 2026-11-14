@@ -45,6 +45,18 @@ python3 wowaddons.py            # starts the application
 python3 wowaddons.py --selftest # built-in checks
 ```
 
+## Tested on
+
+`tools/test-distros.sh` installs the app in a fresh container of each family, as an ordinary user and with only the
+libraries the installer suggests, then runs the built-in checks and `tools/smoke.py` (the real window without a screen:
+the page loads, the search box takes typing, the close dialog works, an addon installs and a non-Forever one is refused).
+It passes on Debian 13, Ubuntu 24.04, Fedora, Arch and openSUSE Tumbleweed. Run it after any change:
+
+```
+tools/test-distros.sh              # every family (needs docker or podman)
+python3 tools/smoke.py             # just this computer
+```
+
 ## CurseForge
 
 CurseForge is only read through the official API (`api.curseforge.com`) with a key you paste into Settings; the key is stored
