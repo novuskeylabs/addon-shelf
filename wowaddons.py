@@ -212,6 +212,23 @@ def primary(a):
     return min(a["folders"], key=len)
 
 
+_CLIENT = r"(?:retail|forever|classic|era|vanilla|anniversary|hardcore|tbc|bcc|wotlk|wrath|cata(?:clysm)?|mop|mists|sod|midnight|mainline|tww)"
+_FILL = r"(?:and|&|\+|/|\||,|for|on|wow|the|all|includes?|supports?|clients?|versions?)"
+_LIST = rf"(?:{_FILL}\s*)*{_CLIENT}(?:\s*(?:{_FILL}\s*)+{_CLIENT})+(?:\s*{_FILL})*"     # two or more game clients, nothing else
+
+
+def short_name(name):
+    """A title without its list of supported game clients: 'GatherMate2_Data (Retail & Forever)' -> 'GatherMate2_Data'.
+    Only lists of two or more clients go; a single client word is usually part of the addon's own name."""
+    s = re.sub(rf"\s*[\(\[]\s*{_LIST}\s*[\)\]]", "", name, flags=re.I)                    # (Retail | Forever), [Forever/TBC/Classic]
+    s = re.sub(rf"\s+[-\u2013\u2014:]\s+{_LIST}\s*(?=$|[\)\]])", "", s, flags=re.I)          # ... - Forever & Retail
+    s = re.sub(rf"\s+for\s+{_LIST}\s*$", "", s, flags=re.I)                                   # ... for Retail and WOW Forever
+    if s == name:
+        return name.strip()                             # nothing removed: leave the author's punctuation alone
+    s = re.sub(r"\s{2,}", " ", s).strip(" -\u2013\u2014:")
+    return s if len(s) >= 3 else name
+
+
 def norm(s):
     return re.sub(r"[^a-z0-9]", "", (s or "").lower()).lstrip("v")
 
@@ -569,7 +586,7 @@ def latest(key):
     if src == "wowi":
         d = http(f"https://api.mmoui.com/v3/game/WOW/filedetails/{ref}.json")[0]
         return {"version": d["UIVersion"], "id": d["UIVersion"], "url": d["UIDownload"],
-                "page": d.get("UIFileInfoURL", ""), "name": d["UIName"]}
+                "page": d.get("UIFileInfoURL", ""), "name": short_name(d["UIName"])}
     raise RuntimeError("This addon has no known source yet. Find it in the catalog to link it.")
 
 
@@ -585,7 +602,7 @@ def cf_newest(mod):
     if not f:
         raise RuntimeError("No Forever version published")
     return {"version": re.sub(r"\.zip$", "", f["filename"]), "id": str(f["fileId"]), "page": mod["links"]["websiteUrl"],
-            "name": mod["name"], "restricted": mod.get("allowModDistribution") is False, "category": cf_category(mod),
+            "name": short_name(mod["name"]), "restricted": mod.get("allowModDistribution") is False, "category": cf_category(mod),
             "thumb": (mod.get("logo") or {}).get("thumbnailUrl", ""), "released": epoch(mod.get("dateReleased"))}
 
 
@@ -645,7 +662,7 @@ def cf_category(m):
 def row_cf(m):
     cat = cf_category(m)
     ver = (cf_pick(m) or {}).get("filename", "")
-    return {"key": f"cf:{m['id']}", "source": "CurseForge", "name": m["name"], "summary": m.get("summary", ""),
+    return {"key": f"cf:{m['id']}", "source": "CurseForge", "name": short_name(m["name"]), "summary": m.get("summary", ""),
             "author": ", ".join(a["name"] for a in m.get("authors", [])[:2]), "downloads": int(m.get("downloadCount") or 0),
             "thumb": (m.get("logo") or {}).get("thumbnailUrl", ""), "page": m["links"]["websiteUrl"], "category": cat,
             "updated": epoch(m.get("dateReleased") or m.get("dateModified")), "version": re.sub(r"\.zip$", "", ver),
@@ -653,7 +670,7 @@ def row_cf(m):
 
 
 def row_wowi(a):
-    return {"key": f"wowi:{a['UID']}", "source": "WoWInterface", "name": a["UIName"], "summary": "",
+    return {"key": f"wowi:{a['UID']}", "source": "WoWInterface", "name": short_name(a["UIName"]), "summary": "",
             "author": a.get("UIAuthorName", ""), "downloads": int(a.get("UIDownloadTotal") or 0),
             "thumb": (a.get("UIIMG_Thumbs") or [""])[0], "page": a.get("UIFileInfoURL", ""),
             "category": wowi_cats().get(a.get("UICATID"), "Other"), "updated": int(a.get("UIDate") or 0) // 1000,
@@ -1120,7 +1137,7 @@ def view(st=None):
             saved[f.name.split(".lua")[0]] = saved.get(f.name.split(".lua")[0], 0) + 1
 
     def row(k, a):
-        base = {"key": k, "source": SOURCES[k.split(":")[0]], **a, **LIVE.get(k, {})}
+        base = {"key": k, "source": SOURCES[k.split(":")[0]], **a, **LIVE.get(k, {}), "name": short_name(a["name"])}
         try:
             t = toc(primary(a))
             return {**base, "size": folder_size(a["folders"]), "notes": t.get("notes", ""),
@@ -1599,6 +1616,22 @@ def main():
 
 
 def selftest():
+    for full, short in (("GatherMate2_Data (Retail & Forever)", "GatherMate2_Data"),
+                        ("Kaliel's Tracker (Retail | Forever) ... Quest / World Quest", "Kaliel's Tracker ... Quest / World Quest"),
+                        ("NKThreat \u2013 Threat Meter, Aggro Alerts [Forever/TBC/Classic/MoP/Retail]", "NKThreat \u2013 Threat Meter, Aggro Alerts"),
+                        ("Examiner (SuperInspect) [Forever / Retail / Classic / SoD]", "Examiner (SuperInspect)"),
+                        ("Forevermore Classic UI - Forever & Retail", "Forevermore Classic UI"),
+                        ("Incoming-BG for Retail and WOW Forever", "Incoming-BG"),
+                        ("SmartBuff - Retail & Classic Clients", "SmartBuff"),
+                        ("Outfitter (Equipment Manager - Retail and Forever)", "Outfitter (Equipment Manager)"),
+                        ("Chattynator (Chat)", "Chattynator (Chat)"),                       # not a client list
+                        ("DBM - Forever and Vanilla (Requires Deadly Boss Mods) - DBM", "DBM - Forever and Vanilla (Requires Deadly Boss Mods) - DBM"),
+                        ("ClassicUI Forever (Classic UI for Forever AND Retail)", "ClassicUI Forever (Classic UI for Forever AND Retail)"),
+                        ("AtlasLoot Classic Forever", "AtlasLoot Classic Forever"),         # the clients are the addon's own name
+                        ("Hide Anything - Forever", "Hide Anything - Forever"),             # one client is not a list
+                        ("Decursive -Ace3-", "Decursive -Ace3-"),
+                        ("Damage Meter Forever", "Damage Meter Forever")):
+        assert short_name(full) == short, (full, short_name(full))
     assert norm("v1.0.7-b") == norm("1.0.7 b") == "107b"
     assert is_current({"version": "1.0.7 b"}, {"id": "x", "version": "DialogueUI-1.0.7-b.zip"})
     assert not is_current({"version": "1.4.0"}, {"id": "x", "version": "Lueur-1.7.0.zip"})
