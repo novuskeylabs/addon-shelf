@@ -411,7 +411,7 @@ function paintList(){const L=LIST;$("#results").innerHTML=`<div class="bar"><but
  <table class="tbl clist"><thead><tr><th>Addon</th><th class="c-by">Author</th><th class="num">Downloads</th><th class="c-up">Updated</th><th class="c-ver">Version</th><th class="c-act"></th></tr></thead><tbody>${L.rows.map((x,i)=>`<tr data-k="${esc(x.key)}"><td class="who"><div class="cell"><span class="rank">${i+1}</span>${thumb(x,"mini")}<span><b>${esc(x.name)}</b><small>${esc(x.summary)}</small></span></div></td><td class="c-by">${esc(x.author)}</td><td class="num">${compact.format(x.downloads)}</td><td>${ago(x.updated)}</td><td class="c-ver">${esc((x.version||"").slice(0,26))}</td><td>${actBtn(x)}</td></tr>`).join("")}</tbody></table>
  ${L.rows.length&&!L.end&&L.rows.length<L.total?`<p style="text-align:center;margin-top:18px"><button class="btn" data-more>Show 50 more</button></p>`:""}`}
 function recat(){if(mode=="landing")landing();else if(mode=="list")paintList();else paint()}
-$("#go").onclick=find;$("#q").onkeydown=e=>e.key=="Enter"&&find();$("#sort").onchange=paint;$("#catnote").onclick=e=>e.target.dataset.go&&show(e.target.dataset.go);
+$("#go").onclick=find;$("#q").onkeydown=e=>{if(e.key=="Enter")find()};$("#sort").onchange=paint;$("#catnote").onclick=e=>e.target.dataset.go&&show(e.target.dataset.go);
 $("#srcs").onclick=e=>{const b=e.target.closest("[data-s]");if(b){srcOn=b.dataset.s;paint()}};
 async function install(key,name,btn){const host=btn?.closest(".card,tr");if(btn){btn.textContent="Installing…";btn.setAttribute("aria-disabled","true");host?.classList.add("busy")}
  try{S=await api("install",{key});draw();recat();toast(`Installed ${name}${later()}`);return true}
