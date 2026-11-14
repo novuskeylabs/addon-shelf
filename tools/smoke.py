@@ -76,6 +76,41 @@ try:
     w.install_zip(z); raise SystemExit("smoke: FAIL a non-Forever addon was installed")
 except RuntimeError:
     pass
+# required companions (Questie needs QuestieDB): installed along with the addon, never over an existing folder, and
+# flagged by the update check when missing
+def fake_zip(path, folder, ver="1.0"):
+    with zipfile.ZipFile(path, "w") as f:
+        f.writestr(f"{folder}/{folder}.toc", f"## Interface: 16001\n## Title: {folder}\n## Version: {ver}\n")
+MODS = {10: ("Needy", [11, 12]), 11: ("Helper", []), 12: ("Bundled", [])}
+def fake_mod(i):
+    name, deps = MODS[i]
+    return {"id": i, "name": name, "slug": name.lower(), "links": {"websiteUrl": "https://example.invalid/" + name}, "allowModDistribution": True,
+            "latestFilesIndexes": [{"fileId": i * 100, "releaseType": 1, "gameVersionTypeId": w.CF_FOREVER, "filename": name + "-1.0.zip"}],
+            "latestFiles": [{"id": i * 100, "dependencies": [{"modId": d, "relationType": 3} for d in deps] + [{"modId": 99, "relationType": 1}]}]}
+def fake_cf(path, body=None, full=False):
+    if path == "/mods": return [fake_mod(i) for i in body["modIds"] if i in MODS]
+    parts = path.strip("/").split("/")
+    if len(parts) == 2: return fake_mod(int(parts[1]))
+    m = fake_mod(int(parts[1])); return {**m["latestFiles"][0], "downloadUrl": "fake://" + m["name"]}
+real_cf, real_download, real_key = w.cf, w.download, w.cf_key
+w.cf, w.cf_key = fake_cf, lambda: "test-key"
+w.download = lambda url, dest: fake_zip(dest, url.split("//")[1])
+(addons / "Bundled").mkdir(); (addons / "Bundled/Bundled.toc").write_text("## Interface: 16001\n## Title: Bundled\n## Version: 0.1\n")
+w.install("cf:10")
+st = json.loads(w.STATE.read_text())["addons"]
+assert "cf:10" in st and "cf:11" in st, "the required companion was not installed along with the addon"
+assert "cf:12" not in st and "0.1" in (addons / "Bundled/Bundled.toc").read_text(), "a companion that is already present must be left alone"
+assert w.WITH.get("cf:10") == ["Helper"], w.WITH
+w.remove("cf:11")
+real_check()
+assert [n["name"] for n in w.LIVE["cf:10"].get("needs", [])] == ["Helper"], "the update check must flag a missing companion"
+w.install("cf:11")
+assert not w.LIVE["cf:10"].get("needs"), "installing the companion clears the flag"
+for k in ("cf:10", "cf:11"): w.remove(k)
+shutil.rmtree(addons / "Bundled")
+w.cf, w.download, w.cf_key = real_cf, real_download, real_key
+w.LIVE.clear(); w.WITH.clear()
+
 # background checks: back-off after failures, nothing lost when the network is down or a source refuses, no overlap
 import time, urllib.error, urllib.request
 A = w.AUTO

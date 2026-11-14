@@ -18,6 +18,8 @@ installed or managed.
   Settings.
 - **System tray:** the window's close button can close the app or keep it running in the tray; it asks the first time,
   can remember the answer, and Settings changes it. Opening the app again brings the running copy's window back.
+- **Companion addons:** when an addon cannot work without another one (Questie needs QuestieDB), that one is
+  installed with it; if one goes missing, the addon's tile offers to add it.
 - **Background checks:** while open or in the tray it looks for addon updates every 30 minutes and tells you when
   something new is out. A lost connection or a blocked source changes nothing on screen and is retried later.
 - **Updates itself:** Settings can pull the newest version from this repository.

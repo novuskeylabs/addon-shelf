@@ -577,7 +577,8 @@ def latest(key):
         if not cf_key():
             raise RuntimeError("Add a CurseForge key in Settings to check this addon")
         new = cf_newest(cf(f"/mods/{ref}"))             # the same choice the update check makes
-        return {**new, "url": cf(f"/mods/{ref}/files/{new['id']}").get("downloadUrl")}
+        f = cf(f"/mods/{ref}/files/{new['id']}")
+        return {**new, "url": f.get("downloadUrl"), "requires": cf_required(f)}
     if src == "gh":
         rel = gh(f"repos/{ref}/releases/latest")
         zips = [a for a in rel.get("assets", []) if a["name"].lower().endswith(".zip")]
@@ -596,6 +597,31 @@ def cf_pick(mod):
     """The project's newest Forever file: a full release when there is one, otherwise the newest beta or alpha."""
     idx = [f for f in mod.get("latestFilesIndexes") or [] if f.get("gameVersionTypeId") == CF_FOREVER]
     return max([f for f in idx if f.get("releaseType") == 1] or idx, key=lambda f: f["fileId"], default=None)
+
+
+def cf_required(f):
+    """Project ids of the addons a CurseForge file cannot work without (its author marked them as required)."""
+    return [d["modId"] for d in (f or {}).get("dependencies") or [] if d.get("relationType") == 3]
+
+
+def cf_requires(mod):
+    """The same for a project's newest Forever file, from data a batch lookup already carries (no extra request)."""
+    pick = cf_pick(mod)
+    return cf_required(next((f for f in mod.get("latestFiles") or [] if pick and f.get("id") == pick["fileId"]), None))
+
+
+def companions(ids, st):
+    """Required addons that are really missing: not on the shelf, not already present as a folder (many addons bundle
+    theirs), and available for Forever. One request for all of them. -> [{key, name}]"""
+    ids = [i for i in dict.fromkeys(ids) if f"cf:{i}" not in st["addons"]]
+    if not ids:
+        return []
+    here = {norm(p.name) for p in addons_dir().iterdir() if p.is_dir()}
+    return [{"key": f"cf:{m['id']}", "name": short_name(m["name"])} for m in cf("/mods", {"modIds": ids})
+            if cf_pick(m) and norm(m["name"]) not in here and norm(m.get("slug", "")) not in here]
+
+
+WITH = {}           # key -> names of the companions the last install of it brought along (read once by the window)
 
 
 def cf_newest(mod):
@@ -891,7 +917,7 @@ def swap_in(key, found, replace):
         raise
 
 
-def install(key):
+def install(key, companion_of=()):
     game_has(load()["addons"].get(key, {}).get("folders", []))      # before downloading anything
     new = latest(key)
     if not new["url"]:
@@ -902,6 +928,8 @@ def install(key):
         download(new["url"], zpath)
         found = unpack_forever(zpath, Path(tmp) / "x")
         names = [d.name for d in found]
+        if companion_of and any((addons_dir() / n).exists() for n in names):
+            return None                                 # brought along only when missing: never replaces what is there
         game_has(names)
         with LOCK:
             st = load()
@@ -918,6 +946,22 @@ def install(key):
                                  **({"category": prev_cat} if prev_cat else {})}
             save(st)
     LIVE[key] = {"latest": new["version"], "latest_id": new["id"], "page": new["page"], "update": False, "error": ""}
+    for v in LIVE.values():                             # whoever was waiting for this one has it now
+        if v.get("needs"):
+            v["needs"] = [n for n in v["needs"] if n["key"] != key]
+    brought, left = [], []                              # left: present already, or could not be fetched
+    try:                                                # addons this one cannot work without come along
+        for dep in companions(new.get("requires") or [], st) if len(companion_of) < 3 else []:
+            if dep["key"] in companion_of:
+                continue
+            try:
+                (brought if install(dep["key"], (*companion_of, key)) else left).append(dep["name"])
+            except Exception:                           # CurseForge-only, unreachable...: the tile will offer it
+                left.append(dep["name"])
+                LIVE[key].setdefault("needs", []).append(dep)
+    except Exception:
+        pass                                            # the next update check finds and offers them
+    WITH[key] = brought
     return st["addons"][key]
 
 
@@ -1115,6 +1159,13 @@ def check():
                     note(k, a, cf_newest(mods[k]))
                 except Exception as e:
                     failed(k, e)
+            try:                                        # required companions that are missing, e.g. Questie's QuestieDB
+                wants = {k: cf_requires(mods[k]) for k in cfs if k in mods}
+                missing = {d["key"]: d for d in companions([i for ids in wants.values() for i in ids], st)}
+                for k, ids in wants.items():
+                    LIVE[k]["needs"] = [missing[f"cf:{i}"] for i in ids if f"cf:{i}" in missing]
+            except Exception:
+                pass                                    # a hint only: never lets a check fail
         except Exception as e:
             for k in cfs:
                 failed(k, e)
@@ -1405,7 +1456,7 @@ class H(BaseHTTPRequestHandler):
                 r = {**view(), "files": n}
             elif route in ("install", "remove", "rollback"):
                 {"install": install, "remove": remove, "rollback": rollback}[route](body["key"])
-                r = view()
+                r = {**view(), "with": WITH.pop(body["key"], [])}
             elif route == "fetch":                      # author-restricted file: through CurseForge's own download page, in the app
                 if not body["url"].startswith("https://www.curseforge.com/") or FETCH is None:
                     raise RuntimeError("This download needs the desktop application")

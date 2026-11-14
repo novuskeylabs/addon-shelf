@@ -305,7 +305,7 @@ function tile(a,i){const none=a.source=="No source";
  return `<button class="tile${a.update?" upd":""}${a.key==sel?" sel":""}" data-k="${esc(a.key)}" style="--c:${color(a)};--i:${i}">
  <span class="ico">${art(a)}</span>
  <span class="nm">${esc(a.name)}</span><span class="ver">${esc(a.version||"version unknown")}${a.update?`<b> → ${esc(a.latest.slice(0,24))}</b>`:""}</span>
- <span class="st"><span class="src ${a.source}">${esc(a.source)}</span><span>${mb(a.size)}</span>${a.damaged?`<span class="bad">Damaged</span>`:a.update?`<span class="btn sm" role="button" data-up="${esc(a.key)}">Update</span>`:a.latest?`<span class="ok">Up to date</span>`:""}</span></button>`}
+ <span class="st"><span class="src ${a.source}">${esc(a.source)}</span><span>${mb(a.size)}</span>${a.damaged?`<span class="bad">Damaged</span>`:a.needs?.length?`<span class="btn sm" role="button" data-need="${esc(a.needs[0].key)}" title="${esc(a.name)} does not work without ${esc(a.needs[0].name)}">Add ${esc(a.needs[0].name.slice(0,16))}</span>`:a.update?`<span class="btn sm" role="button" data-up="${esc(a.key)}">Update</span>`:a.latest?`<span class="ok">Up to date</span>`:""}</span></button>`}
 // Possible conflicts: a lower-triangle linkage matrix of the installed addons that seem to do the same job.
 function conflicts(){const C=S.conflicts||[],by=k=>S.addons.find(a=>a.key==k),keys=[...new Set(C.flatMap(c=>[c.a,c.b]))].filter(by).sort((x,y)=>by(x).name.localeCompare(by(y).name)),n=keys.length;
  const head=`<h3 class="group" style="margin:2px 0 6px">Possible conflicts<small>${C.length?C.length+(C.length>1?" pairs":" pair"):""}</small></h3>`;
@@ -352,7 +352,7 @@ function openPage(k){const a=S.addons.find(x=>x.key==k);if(!a){closePage();retur
  $("#page").style.setProperty("--pc",color(a));
  $("#page>div").innerHTML=`<span class="badge ${a.damaged||a.update?"new":loose?"loose":""}">${a.damaged?"Damaged":a.update?"Newer version available":loose?"No source recorded":a.latest?"Up to date":"Linked to "+esc(a.source)}</span><h2>${esc(a.name)}</h2><p class="by">${esc(a.notes||"No description in the addon.")}</p>
  <dl><dt>Installed</dt><dd>${esc(a.version||"unknown")}</dd>${a.latest?`<dt>Newest</dt><dd>${esc(a.latest)}</dd>`:""}<dt>Source</dt><dd>${esc(a.source)}</dd><dt>Category</dt><dd><select class="field" data-cat style="height:32px;padding:0 8px">${(S.categories||[]).map(c=>`<option${c==a.category?" selected":""}>${esc(c)}</option>`).join("")}</select></dd><dt>Size</dt><dd>${mb(a.size)}</dd><dt>Settings</dt><dd>${a.settings?`${a.settings} saved file${a.settings>1?"s":""}`:a.settings_saved?"Default (reset)":"Default (none saved yet)"}</dd><dt>Folders</dt><dd>${a.folders.length>3?a.folders.length+" folders, the main one being "+esc([...a.folders].sort((x,y)=>x.length-y.length)[0]):a.folders.map(esc).join(", ")}</dd></dl>
- ${a.damaged?`<p class="warn">${esc(a.damaged)}. Reinstalling replaces its files with a fresh copy; your settings are kept.</p>`:""}${a.error?`<p class="warn">${esc(a.error)}</p>`:""}${a.restricted?`<p>This author only allows downloads on CurseForge itself, so its download page opens in the app and the file is installed for you from there.</p>`:""}${loose?`<p>There is nowhere to check this addon for updates yet. Find it in the catalog and install it from there to link it.</p>`:""}
+ ${a.damaged?`<p class="warn">${esc(a.damaged)}. Reinstalling replaces its files with a fresh copy; your settings are kept.</p>`:""}${a.error?`<p class="warn">${esc(a.error)}</p>`:""}${(a.needs||[]).map(n=>`<p class="warn">${esc(a.name)} does not work without ${esc(n.name)}, which is not installed. <button class="btn sm" data-need="${esc(n.key)}">Add ${esc(n.name)}</button></p>`).join("")}${a.restricted?`<p>This author only allows downloads on CurseForge itself, so its download page opens in the app and the file is installed for you from there.</p>`:""}${loose?`<p>There is nowhere to check this addon for updates yet. Find it in the catalog and install it from there to link it.</p>`:""}
  <div class="acts">${loose?`<button class="btn" data-a="find">Find in catalog</button>`:`<button class="btn" data-a="install">${a.damaged&&!a.restricted?"Reinstall to repair":a.restricted?"Get on CurseForge":a.update?"Update":"Reinstall"}</button><button class="btn quiet" data-a="info">Screenshots and details</button>`}
  ${a.can_rollback?`<button class="btn quiet" data-a="rollback">Restore previous version</button>`:""}
  ${a.settings?`<button class="btn quiet" data-a="reset">Reset to default settings</button>`:""}${a.settings_saved?`<button class="btn quiet" data-a="unreset">Undo settings reset</button>`:""}<button class="btn danger" data-a="remove">Remove</button><button class="btn quiet" data-a="close">Close</button></div>`;
@@ -361,9 +361,10 @@ function closePage(){sel=null;$("#page").classList.remove("on");$$(".tile.sel").
 const tileOf=k=>$(`.tile[data-k="${CSS.escape(k)}"]`);
 async function act(route,key,done){const t=tileOf(key);t&&t.classList.add("busy");
  try{const r=await api(route,{key});if(route=="remove"){closePage();if(t){t.classList.add("gone");await new Promise(z=>setTimeout(z,280))}}S=r;draw();
-  if(route!="remove"){const n=tileOf(key);n&&n.classList.add("done")}toast(done);return true}
+  if(route!="remove"){const n=tileOf(key);n&&n.classList.add("done")}toast(done+(r.with?.length?" with "+r.with.join(", "):""));return true}
  catch(e){if(e.browser)return viaBrowser(e.browser,S.addons.find(x=>x.key==key)?.name||"the addon");toast(e.message,1);t&&t.classList.remove("busy")}}
-$("#tiles").onclick=e=>{const u=e.target.closest("[data-up]"),t=e.target.closest(".tile");
+const addNeed=n=>{const d=S.addons.flatMap(a=>a.needs||[]).find(x=>x.key==n.dataset.need);act("install",n.dataset.need,`Added ${d?d.name:"the companion addon"}`)};
+$("#tiles").onclick=e=>{const u=e.target.closest("[data-up]"),t=e.target.closest(".tile"),n=e.target.closest("[data-need]");if(n)return addNeed(n);
  if(e.target.closest("[data-again]"))return api("rescan",{}).then(n=>{S=n;draw();if(!S.game_missing)toast("Found your addon folder")}).catch(x=>toast(x.message,1));if(e.target.closest("[data-go]"))return show(e.target.closest("[data-go]").dataset.go);
  if(u){const a=S.addons.find(x=>x.key==u.dataset.up);act("install",a.key,`Updated ${a.name}`)}else if(t)t.dataset.k==sel?closePage():openPage(t.dataset.k)};
 $("#list").onclick=e=>{const u=e.target.closest("[data-up]"),r=e.target.closest("tr[data-k]");if(u){const a=S.addons.find(x=>x.key==u.dataset.up);u.disabled=true;act("install",a.key,`Updated ${a.name}`)}else if(r)openPage(r.dataset.k)};
@@ -371,7 +372,7 @@ $("#hints").onclick=async e=>{const t=e.target;if(t.dataset.go)show(t.dataset.go
  else if(t.dataset.f){t.disabled=true;try{const r=await api("install_file",{path:t.dataset.f});markSeen(t.dataset.f);S=r;draw();toast(`Installed ${r.installed}${later()}`)}catch(x){t.disabled=false;toast(x.message,1)}}};
 $("#filter").oninput=()=>draw();$(".seg").onclick=e=>{if(e.target.dataset.view){view=localStorage.view=e.target.dataset.view;draw()}};
 $("#page").onchange=async e=>{if(e.target.matches("[data-cat]"))try{S=await api("category",{key:sel,category:e.target.value});draw();toast("Moved to "+e.target.value)}catch(x){toast(x.message,1)}};
-$("#page").onclick=e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=S.addons.find(x=>x.key==sel),x=b.dataset.a;
+$("#page").onclick=e=>{const nd=e.target.closest("[data-need]");if(nd)return addNeed(nd);const b=e.target.closest("[data-a]");if(!b)return;const a=S.addons.find(x=>x.key==sel),x=b.dataset.a;
  if(x=="close")closePage();else if(x=="find"){show("cat");$("#q").value=a.name.replace(/\s*[-–(\[].*$/,"");find()}else if(x=="info")info(a.key)
  else if(x=="install")act("install",a.key,`${a.update?"Updated":"Reinstalled"} ${a.name}`);else if(x=="rollback")act("rollback",a.key,`Restored the previous version of ${a.name}`);
  else if(x=="reset"){if(!b.dataset.sure){b.dataset.sure=1;b.textContent="Click again to erase its settings";setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent="Reset to default settings"}},5000);return}
@@ -429,7 +430,7 @@ function recat(){if(mode=="landing")landing();else if(mode=="list")paintList();e
 $("#go").onclick=find;$("#q").onkeydown=e=>{if(e.key=="Enter")find()};$("#sort").onchange=paint;$("#catnote").onclick=e=>e.target.dataset.go&&show(e.target.dataset.go);
 $("#srcs").onclick=e=>{const b=e.target.closest("[data-s]");if(b){srcOn=b.dataset.s;paint()}};
 async function install(key,name,btn){const host=btn?.closest(".card,tr");if(btn){btn.textContent="Installing…";btn.setAttribute("aria-disabled","true");host?.classList.add("busy")}
- try{S=await api("install",{key});draw();recat();toast(`Installed ${name}${later()}`);return true}
+ try{S=await api("install",{key});draw();recat();toast(`Installed ${name}${S.with?.length?" with "+S.with.join(", "):""}${later()}`);return true}
  catch(x){if(x.browser){const ok=await viaBrowser(x.browser,name);recat();return ok}toast(x.message,1);if(btn){btn.textContent="Install";btn.removeAttribute("aria-disabled");host?.classList.remove("busy")}}}
 async function uninstall(key,name,btn){if(btn&&!btn.dataset.sure){btn.dataset.sure=1;btn.textContent="Click again to uninstall";setTimeout(()=>{if(btn.isConnected){delete btn.dataset.sure;btn.textContent="Uninstall"}},4000);return}
  try{S=await api("remove",{key:mine(key)});if(sel==mine(key))closePage();draw();recat();toast(`Uninstalled ${name}. A copy is kept in case you want it back.`);return true}catch(x){toast(x.message,1)}}
