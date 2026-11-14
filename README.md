@@ -16,6 +16,8 @@ installed or managed.
 - **Finds the game for you:** on first start, and whenever the game goes missing, it scans the usual places (Lutris,
   Bottles, Heroic, Steam/Proton, plain Wine, their Flatpak versions, extra drives). You can also choose the folder in
   Settings.
+- **System tray:** the window's close button can close the app or keep it running in the tray; it asks the first time,
+  can remember the answer, and Settings changes it. Opening the app again brings the running copy's window back.
 - **Updates itself:** Settings can pull the newest version from this repository.
 
 ## Install

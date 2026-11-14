@@ -31,6 +31,8 @@ SRC_CAT = {}        # key -> the source's own category for that addon (session o
 LIVE = {}           # key -> {latest, latest_id, page, update, error, restricted}; never written to disk
 RESTART = None      # set by the application window: restarts the app (used after a new key is saved)
 NOTE = {}           # "net": why the last update check could not reach the sources
+CLOSE = None        # set by the application window: CLOSE("tray" | "quit" | "raise")
+TRAY = False        # is there a system tray to minimize to?
 FETCH = None        # set by the application window: FETCH(url) -> Path of the file CurseForge's download page delivered
 
 
@@ -1109,7 +1111,7 @@ def view(st=None):
         st = st or sync()
         groups = group_folders()
     except GameMissing as e:
-        return {"addons": [], "game_missing": str(e), "wow_running": False, "has_cf_key": bool(cf_key()), "addons_dir": "",
+        return {"on_close": load().get("on_close", "ask"), "tray": TRAY, "addons": [], "game_missing": str(e), "wow_running": False, "has_cf_key": bool(cf_key()), "addons_dir": "",
                 "new_downloads": [], "categories": CATEGORIES, "conflicts": [], "unmanaged": [], "also": {}, "net": ""}
     names = shelf_categories()
     saved = {}                                          # one pass over the game's settings folders for all addons
@@ -1146,7 +1148,7 @@ def view(st=None):
             return "its description (.toc) file is empty or unreadable"
         return "it is not built for WoW Forever"
     loose = [{"name": p, "why": why(p)} for p in sorted(groups) if p not in owned]
-    return {"addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
+    return {"on_close": st.get("on_close", "ask"), "tray": TRAY, "addons": rows, "wow_running": wow_running(), "has_cf_key": bool(cf_key()), "addons_dir": str(addons_dir()),
             "new_downloads": fresh, "categories": names, "conflicts": conflicts(st["addons"]), "unmanaged": loose,
             "also": {k: v for k, v in ALSO.items() if v in st["addons"] and k not in st["addons"]}, "net": NOTE.get("net", "")}
 
@@ -1266,6 +1268,22 @@ class H(BaseHTTPRequestHandler):
                 except GameMissing:
                     pass
                 r = check()
+            elif route in ("on_close", "close"):        # what the window's close button does
+                how = body["value" if route == "on_close" else "action"]
+                if how not in (("ask", "tray", "quit") if route == "on_close" else ("tray", "quit")):
+                    raise RuntimeError("Unknown choice")
+                if route == "on_close" or body.get("remember"):
+                    with LOCK:
+                        st = load()
+                        st["on_close"] = how
+                        save(st)
+                if route == "close" and CLOSE:
+                    threading.Timer(0.15, CLOSE, [how]).start()     # after this reply has reached the window
+                r = view() if route == "on_close" else {}
+            elif route == "raise":                      # a second launch asks the running copy to show its window
+                if CLOSE:
+                    CLOSE("raise")
+                r = {}
             elif route == "folder":
                 set_addons_dir(body["path"])
                 r = view()
@@ -1365,6 +1383,13 @@ def main():
         if not os.environ.get("WOWADDONS_SHOT"):
             fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
+        try:                                            # the running copy may be sitting in the tray: ask it to show itself
+            port, token = (CONF / "instance").read_text().split()
+            req = urllib.request.Request(f"http://127.0.0.1:{int(port)}/api/raise", data=b"{}", headers={"X-Token": token})
+            urllib.request.urlopen(req, timeout=3).close()
+            sys.exit(0)
+        except (OSError, ValueError):
+            pass
         box = QApplication(sys.argv[:1])
         QMessageBox.information(None, APP, APP + " is already open.")
         sys.exit(0)
@@ -1372,6 +1397,10 @@ def main():
     H.token = secrets.token_urlsafe(24)
     srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
+    if not os.environ.get("WOWADDONS_SHOT"):
+        note = CONF / "instance"                        # how a second launch reaches this one; readable by this user only
+        note.touch(mode=0o600)
+        note.write_text(f"{srv.server_address[1]} {H.token}")
 
     app = QApplication(sys.argv[:1])
     app.setApplicationName(APP)
@@ -1390,7 +1419,26 @@ def main():
             tmp.urlChanged.connect(lambda u: (QDesktopServices.openUrl(u), tmp.deleteLater()))
             return tmp
 
-    view = QWebEngineView()
+    leaving = []
+
+    def leave():                                        # the one way out: Qt asks every window to close before it quits,
+        leaving.append(1)                               # and a window that refuses would cancel the quit
+        QTimer.singleShot(0, app.quit)
+
+    class Window(QWebEngineView):
+        def closeEvent(self, ev):
+            how = load().get("on_close", "ask") if tray else "quit"     # no tray to hide in: closing closes the app
+            if leaving or how == "quit":
+                ev.accept()
+                return None if leaving else leave()
+            ev.ignore()
+            if how == "tray":
+                return to_tray()
+            heard = []                                  # ask in the window; if the page cannot answer, close as before
+            self.page().runJavaScript("typeof askClose=='function'&&askClose()", lambda ok: heard.append(ok))
+            QTimer.singleShot(1500, lambda: any(heard) or leave())
+
+    view = Window()
     view.setPage(Page(profile, view))
     view.setWindowTitle(APP)
     view.resize(1500, 950)
@@ -1406,6 +1454,7 @@ def main():
         """Shows CurseForge's own download page for an addon the user asked for, and hands back the file it delivers."""
         wanted = Signal(str, object)
         again = Signal()
+        shut = Signal(str)
         gone = Signal()
 
         def __init__(self):
@@ -1493,12 +1542,27 @@ def main():
     FETCH, RESTART = fetch, fetcher.again.emit
 
     # system tray: a way back to the window, a quick update check, and quit. Closing the window still quits the app.
+    def raise_window():
+        view.show()
+        view.raise_()
+        view.activateWindow()
+
+    told = []
+
+    def to_tray():
+        view.hide()
+        if not told:                                    # once per run, so nobody thinks the app has gone
+            told.append(1)
+            tray.showMessage(APP, "Still running in the system tray. Click the icon to open the window again.", icon, 5000)
+
+    fetcher.shut.connect(lambda how: {"tray": to_tray, "quit": leave, "raise": raise_window}[how](), Qt.QueuedConnection)
+    global CLOSE, TRAY
+    CLOSE = fetcher.shut.emit
+
     tray = None
     if QSystemTrayIcon.isSystemTrayAvailable():
-        def raise_window():
-            view.show()
-            view.raise_()
-            view.activateWindow()
+        TRAY = True
+        app.setQuitOnLastWindowClosed(False)            # the close button decides; hiding the window must not end the app
 
         def toggle(reason):
             if reason == QSystemTrayIcon.Trigger:                   # a plain click on the icon
@@ -1513,7 +1577,7 @@ def main():
         menu.addAction("Open " + APP, raise_window)
         menu.addAction("Check for updates", check_now)
         menu.addSeparator()
-        menu.addAction("Quit", app.quit)
+        menu.addAction("Quit", leave)
         tray.setContextMenu(menu)
         tray.setToolTip(APP)
         tray.activated.connect(toggle)
@@ -1530,7 +1594,7 @@ def main():
             QTimer.singleShot(4000, lambda: view.page().runJavaScript(
                 "(()=>{try{return String(eval(%s))}catch(e){return 'ERR '+e}})()" % json.dumps(os.environ["WOWADDONS_JS"]),
                 lambda r: print("js result:", r, flush=True)))
-        QTimer.singleShot(8000, lambda: (view.grab().save(shot), app.quit()))
+        QTimer.singleShot(8000, lambda: (view.grab().save(shot), leave()))
     sys.exit(app.exec())
 
 

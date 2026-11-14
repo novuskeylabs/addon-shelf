@@ -121,6 +121,9 @@ aside .btn.quiet,dialog .btn.quiet{color:var(--on);border-color:var(--btn-line)}
 /* details dialog */
 dialog{border:0;padding:0;width:min(1000px,94vw);max-height:90vh;border-radius:14px;background:var(--grain),var(--surf);color:var(--on);box-shadow:0 0 0 2px var(--brass),0 30px 80px #000c;overflow:hidden}
 dialog[open]{height:min(900px,90vh);display:flex;flex-direction:column;animation:pop .2s var(--ease)}@keyframes pop{from{transform:scale(.97);opacity:0}}
+#closedlg{width:min(480px,92vw)}#closedlg[open]{height:fit-content}.cd{padding:26px 28px 22px}.cd h2{margin:0 0 10px}.cd p{margin:0 0 16px;color:var(--on2)}
+.chk{display:flex;align-items:center;gap:10px;cursor:pointer}.chk input{width:18px;height:18px;accent-color:var(--brass);cursor:pointer}.cdb{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:22px}
+#onclose{width:max-content;max-width:100%}.seg button:disabled{opacity:.5;cursor:default}
 dialog::backdrop{background:#0b0705cc;backdrop-filter:blur(3px)}
 .dhead,.dfoot{flex:none}.dhead{display:flex;gap:18px;padding:22px 26px 16px;align-items:flex-start;border-bottom:1px solid var(--surf-line)}
 .dhead img{width:84px;height:84px;border-radius:12px;object-fit:cover;background:var(--ph);box-shadow:0 3px 8px #0006}.dhead div{flex:1;min-width:0}
@@ -253,12 +256,18 @@ let THEME=applyTheme(localStorage.theme);
  <h2 style="margin-top:34px">Addon folder</h2><p id="dir"></p><p>If the game was moved or the app picked the wrong copy, paste the full path of its Interface/AddOns folder here.</p>
  <div class="bar"><input class="field grow" id="folder" placeholder="/path/to/World of Warcraft/_forever_/Interface/AddOns" aria-label="AddOns folder" autocomplete="off"><button class="btn" id="savefolder">Use this folder</button></div>
  <h2 style="margin-top:34px">Themes</h2><p>Pick a theme: your faction, your class, your race, or a plain colour scheme. Each preview shows how an addon tile and the buttons look in it. The emblems are original paintings made for this app.</p><div id="theme" role="group" aria-label="Theme"></div>
+ <h2 style="margin-top:34px">Closing the window</h2><p id="closenote"></p>
+ <div class="seg" id="onclose" role="group" aria-label="When the window is closed"><button data-oc="ask">Ask every time</button><button data-oc="tray">Minimize to tray</button><button data-oc="quit">Close the app</button></div>
  <h2 style="margin-top:34px">App updates</h2><p id="appver">Checking this copy…</p>
  <div class="bar"><button class="btn quiet" id="appchk">Check for app updates</button><button class="btn" id="appup" hidden>Update and restart</button></div><ul id="appnews" hidden></ul>
  <h2 style="margin-top:34px">Shortcuts</h2><p><kbd>/</kbd> search &nbsp; <kbd>Esc</kbd> close a page or dialog &nbsp; <kbd>←</kbd><kbd>→</kbd> flip through screenshots. You can also drop a .zip anywhere on the window.</p></section>
 <aside id="page"><div></div></aside>
 </main>
-<dialog id="dlg"></dialog><div id="toast" role="status"></div>
+<dialog id="dlg"></dialog>
+<dialog id="closedlg" aria-labelledby="closeh"><div class="cd"><h2 id="closeh">Close the window</h2>
+ <p>Keep LinuxForever Addon Shelf running in the system tray, or close it completely?</p>
+ <label class="chk"><input type="checkbox" id="closerem"><span>Remember my choice. Settings can change it later.</span></label>
+ <div class="cdb"><button class="btn quiet" data-c="cancel">Cancel</button><button class="btn quiet" data-c="quit">Close the app</button><button class="btn" data-c="tray">Minimize to tray</button></div></div></dialog><div id="toast" role="status"></div>
 <script>
 const T="__TOKEN__",$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const seen=new Set(JSON.parse(sessionStorage.seen||"[]")),markSeen=p=>{seen.add(p);sessionStorage.seen=JSON.stringify([...seen])};
@@ -326,11 +335,13 @@ function draw(first){
   +(S.addons.filter(a=>a.damaged).length?`<p class="hint"><span>${S.addons.filter(a=>a.damaged).map(a=>esc(a.name)).join(", ")} ${S.addons.filter(a=>a.damaged).length>1?"look":"looks"} damaged. Open ${S.addons.filter(a=>a.damaged).length>1?"each":"it"} and reinstall to repair.</span></p>`:"")
   +((S.unmanaged||[]).length?`<p class="hint"><span>Left alone in your AddOns folder: ${S.unmanaged.map(u=>`${esc(u.name)} (${esc(u.why)})`).join("; ")}.</span></p>`:"")
   +(loose?`<p class="hint"><span>${loose} addons have no source recorded, so they cannot be checked for updates. Open one and choose “Find in catalog” to link it.</span></p>`:"");
- $("#tiles").hidden=view!="tiles";$("#list").hidden=view!="list";$$(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view==view));
+ $("#tiles").hidden=view!="tiles";$("#list").hidden=view!="list";$$(".seg button[data-view]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view==view));
  const shown=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)),groups={};shown.forEach(a=>(groups[a.category]??=[]).push(a));let i=0;
  $("#tiles").className=first?"first":"";
  $("#tiles").innerHTML=S.game_missing?`<div class="empty"><p>${esc(S.game_missing)}.</p><p><button class="btn" data-again>Look again</button> <button class="btn quiet" data-go="set">Choose the folder in Settings</button></p></div>`:shown.length?[...(S.categories||[]).filter(c=>groups[c]),...Object.keys(groups).filter(c=>!(S.categories||[]).includes(c))].map(c=>`<div class="tg"><h3 class="group">${esc(c)}<small>${groups[c].length}</small></h3><div class="tgrid">${groups[c].sort((x,y)=>(y.update|0)-(x.update|0)||x.name.localeCompare(y.name)).map(a=>tile(a,i++)).join("")}</div></div>`).join(""):`<p class="empty" style="flex:1">No addon matches “${esc($("#filter").value)}”.</p>`;
  $("#list tbody").innerHTML=S.addons.filter(a=>!f||a.name.toLowerCase().includes(f)).map(a=>`<tr data-k="${esc(a.key)}"><td><i class="chip" style="background:${color(a)}"></i>${esc(a.name)}</td><td>${esc(a.version)}</td><td class="${a.update?"new":""}">${esc(a.update?a.latest:a.latest?"Up to date":"")}</td><td>${esc(a.source)}</td><td>${mb(a.size)}</td><td>${a.update?`<button class="btn sm" data-up="${esc(a.key)}">Update</button>`:""}</td></tr>`).join("");
+ $$("#onclose button").forEach(b=>{b.setAttribute("aria-pressed",S.tray&&b.dataset.oc==(S.on_close||"ask"));b.disabled=!S.tray});
+ $("#closenote").textContent=S.tray?"Choose what the window’s close button does.":"This desktop has no system tray, so closing the window always closes the app.";
  $("#keystate").textContent=S.has_cf_key?"A CurseForge key is saved.":"No CurseForge key saved yet.";$("#dir").textContent=S.addons_dir?"Currently using: "+S.addons_dir:"No addon folder found yet.";
  conflicts();if(sel)openPage(sel)}
 function openPage(k){const a=S.addons.find(x=>x.key==k);if(!a){closePage();return}sel=k;$$(".tile").forEach(s=>s.classList.toggle("sel",s.dataset.k==k));const loose=a.source=="No source";
@@ -454,6 +465,12 @@ $("#savefolder").onclick=async()=>{const v=$("#folder").value.trim();if(!v)retur
 $("#savekey").onclick=async()=>{const k=$("#key").value.trim();if(!k)return toast("Paste the key first",1);try{const r=await api("key",{key:k});$("#key").value="";if(r.restarting){toast("Key saved. Restarting to apply it…");$("#savekey").disabled=true;return}S=await api("state");R=[];CATS=null;TOP={};draw();toast("Key saved")}catch(e){toast(e.message,1)}};
 $("#scan").onclick=async()=>{try{const r=await api("downloads");$("#files").innerHTML=r.files.length?`<table class="tbl" style="margin-bottom:20px"><tbody>${r.files.map(f=>`<tr><td>${esc(f.name)}</td><td>${mb(f.size)}</td><td>${ago(f.when)}</td><td><button class="btn sm" data-f="${esc(f.path)}">Install</button></td></tr>`).join("")}</tbody></table>`:`<p>No .zip files in Downloads.</p>`}catch(e){toast(e.message,1)}};
 $("#files").onclick=async e=>{const b=e.target.closest("[data-f]");if(!b)return;b.disabled=true;try{const r=await api("install_file",{path:b.dataset.f});S=r;draw();b.textContent="Installed";toast(`Installed ${r.installed}${later()}`)}catch(x){b.disabled=false;toast(x.message,1)}};
+// The window's close button: the app asks here unless a choice was remembered.
+function askClose(){const d=$("#closedlg");if(!d.open){$("#closerem").checked=false;d.showModal()}return true}
+$("#closedlg").onclick=async e=>{const c=e.target.dataset.c,d=$("#closedlg");if(!c)return;d.close();if(c=="cancel")return;const remember=$("#closerem").checked;
+ try{await api("close",{action:c,remember});if(remember){S.on_close=c;draw()}}catch(x){toast(x.message,1)}};
+$("#onclose").onclick=async e=>{const v=e.target.dataset.oc;if(!v||e.target.disabled)return;
+ try{S=await api("on_close",{value:v});draw();toast({ask:"The close button will ask each time",tray:"The close button now minimizes to the tray",quit:"The close button now closes the app"}[v])}catch(x){toast(x.message,1)}};
 addEventListener("keydown",e=>{const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
  if(e.key=="/"&&!typing&&!$("#dlg").open){e.preventDefault();const lib=$("#lib").classList.contains("on");if(!lib)show("cat");(lib?$("#filter"):$("#q")).focus()}
  else if(e.key=="Escape"&&!$("#dlg").open){if(typing)document.activeElement.blur();else closePage()}});
